@@ -58,3 +58,96 @@ _join(output_folder, zip_output_path)
 # output_zip_file_path = '/content/drive/MyDrive/computer network/alice_output.zip'
 
 # merge_chunks_to_zip(output_folder, output_zip_file_path, file_size)
+
+import os
+import socket
+
+LOCAL_PORT = 22822
+SERVER_PORT = 12345
+
+class File:
+    def __init__(self):
+        self.path = ""
+        self.size = self.get_file_size(self.path)
+        self.chunk = self.get_total_chunk()
+        self.chunkDict = {}
+
+    def get_file_size(self, path):
+        return os.path.getsize(path)
+    def get_total_chunk(self):
+        # Use for upload client only
+        total_chunk = 0
+
+        return total_chunk
+
+    def merge_chunk(self):
+        return
+
+    def is_enough(self):
+        return len(self.chunkDict) == self.chunk
+
+class client:
+    def __init__(self):
+        self.file_list = []
+        self.client_host = self.get_local_ip()
+        self.client_port = LOCAL_PORT
+        self.server_host = ""
+        self.server_port = SERVER_PORT
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.message = ""
+        self.log = []
+        self.upload_path = ""
+        self.download_path = ""
+
+    def get_local_ip(self):
+        try:
+            # Create a socket object and connect to an external server
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('8.8.8.8', 80))  # Google's public DNS server and port 80
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except socket.error as e:
+            return f"Unable to determine local IP: {str(e)}"
+
+    def set_server_host(self, host):
+        self.server_host = host
+
+    def set_client_upload_path(self, path):
+        self.upload_path = path
+
+    def set_client_download_path(self, path):
+        self.download_path = path
+
+    def set_message(self, message):
+        self.message = message
+
+    def get_server_host(self):
+        return self.server_host
+
+    def get_client_host(self):
+        return self.client_host
+
+    def get_download_dir(self):
+        return self.download_path
+
+    def get_upload_dir(self):
+        return self.upload_path
+
+    def get_message(self):
+        return self.message
+
+    def get_files_list(self):
+        return self.file_list
+
+    def send_chunk_to_client(self, clientInfo):
+        return
+
+    def receive_chunk_from_client(self, clientInfo):
+        return
+
+    def handle_server(self, connection, address):
+        return
+
+    def start_client(self):
+        return

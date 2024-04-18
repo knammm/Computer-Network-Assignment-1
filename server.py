@@ -1,5 +1,5 @@
 import socket
-import time
+# import time
 import threading
 
 BYTES = 102400
@@ -77,7 +77,7 @@ class tracking_server:
                     ports = []
                     self.file_client[magnet_text].append(clientIP) # Append new IP
                     for client in clients_ip:
-                        ports.append[self.client_servers[client]]
+                        ports = ports.append(self.client_servers[client])
 
                     # peers_info['id'] = f"{clientIP}:{clientPort}"
                     peers_info['ip'] = clients_ip
