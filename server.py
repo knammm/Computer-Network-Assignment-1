@@ -1,5 +1,5 @@
 import socket
-import time
+# import time
 import threading
 
 BYTES = 102400
@@ -58,9 +58,8 @@ class tracking_server:
 
         # Receive IP and port from client
         init_message = connection.recv(BYTES).decode("utf-8")
-        init_message.split(" ")
-        clientIP = init_message[0]
-        clientPort = init_message[1]
+        clientIP = address
+        clientPort = init_message
         self.client_servers[clientIP] = clientPort
 
         while True:
@@ -78,7 +77,7 @@ class tracking_server:
                     ports = []
                     self.file_client[magnet_text].append(clientIP) # Append new IP
                     for client in clients_ip:
-                        ports.append[self.client_servers[client]]
+                        ports = ports.append(self.client_servers[client])
 
                     # peers_info['id'] = f"{clientIP}:{clientPort}"
                     peers_info['ip'] = clients_ip
@@ -86,13 +85,13 @@ class tracking_server:
                     # torrent file
                     torrent_info = self.map_torrent[magnet_text]
 
-                    send_data = "[Anouncement]--GET SUCCESSFULLY-- "  # Split by space
+                    send_data = "[Anouncement]--GET_SUCCESSFULLY-- "  # Split by space
                     send_data += f"{torrent_info} "
                     send_data += f"{peers_info}"
                 else:
-                    send_data = "[Warning]--GET FAILED-- NO_FILE_FOUND"
+                    send_data = "[Warning]--GET_FAILED-- NO_FILE_FOUND"
 
-                self.log.append(f"[System Anouncement] {clientIP}: Fetch")
+                self.log.append(f"[System Anouncement] {clientIP}: Download")
                 connection.send(send_data.encode("utf-8"))
 
             elif client_cmd == 'Upload':
@@ -102,15 +101,15 @@ class tracking_server:
                 send_data = ""
                 # Import to the hash table
                 if magnet_text in self.map_torrent.keys():
-                    send_data += "[Failure]--UPLOAD FAILED-- FILE_IS_EXISTED"
+                    send_data += "[Failure]--UPLOAD_FAILED-- FILE_IS_EXISTED"
                 else:
                     # Update torrent table and file-clientip table
                     self.map_torrent[magnet_text] = torrent_content
                     self.file_client[magnet_text] = []
                     self.file_client[magnet_text].append(clientIP)
-                    send_data += "[Anouncement]--UPLOAD SUCCESSFULLY--"
+                    send_data += "[Anouncement]--UPLOAD_SUCCESSFULLY--"
 
-                self.log.append(f"[System Anouncement] {clientIP}: Fetch")
+                self.log.append(f"[System Anouncement] {clientIP}: Upload")
                 connection.send(send_data.encode("utf-8"))
 
             elif client_cmd == 'Disconnect':
