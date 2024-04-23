@@ -1,7 +1,8 @@
 from pathlib import Path
-import sys, os
+import os
+import json
 import socket
-
+import math
 kilobytes = 1024
 chunksize = kilobytes*100
 readsize = kilobytes
@@ -9,9 +10,8 @@ readsize = kilobytes
 class Chunk:
     chunks_dict = {}
     #init function
-    def __init__(self, name, suffix, total):
+    def __init__(self, name, total):
         self.name = name
-        self.suffix = suffix
         self.total = total
         self.number_of_chunk = 0
         self.chunks_dict = {}
@@ -37,39 +37,84 @@ class Chunk:
     def isComplete(self):
         return self.total == self.number_of_chunk
 
+    def split_chunks(self, id, fromfile, todir):
+        if not os.path.exists(todir):                  # caller handles errors
+            os.mkdir(todir)                            # make dir, read/write parts
+        else:
+            for fname in os.listdir(todir):            # delete any existing files
+                os.remove(os.path.join(todir, fname)) 
+        partnum = 0
+        input = open(fromfile, 'rb')                   # use binary mode on Windows
+        while 1:                                       # eof=empty string from read
+            chunk = input.read(chunksize)              # get next part <= chunksize
+            if not chunk: break
+            partnum  = partnum+1
+            filename = os.path.join(todir, (f'{id}_{partnum}.txt'))
+            header = f"{id} {partnum}\n".encode()
+            fileobj  = open(filename, 'wb')
+            fileobj.write(header)
+            fileobj.write(chunk)
+            self.add_chunk(partnum, filename)
+            fileobj.close()                          # or simply open(  ).write(  )
+        input.close(  )
+        return partnum
+    
+    def merge_chunks(self, tofile):
+        output = open(tofile, 'wb')
+        for order in range(self.total):
+            filepath = self.chunks_dict[order+1]        
+            with open(filepath, 'rb') as fileobj:
+                fileobj.readline()
+                while 1:
+                    filebytes = fileobj.read(readsize)
+                    if not filebytes: break
+                    output.write(filebytes)
+                fileobj.close(  )
+        output.close(  )
+
 class Client_dict:
     dict = {}
     def __init__(self):
         self.dict = {}
 
-    def add_file(self, file_id, file_name, suffix, total):
-        self.dict[file_id] = Chunk(file_name, suffix, total)
+    def add_file(self, file_id, file_name, total):
+        if file_id not in self.dict:
+            self.dict[file_id] = Chunk(file_name, total)
+        else:
+            if self.dict[file_id].name == "undefined":
+                self.dict[file_id].name = file_name
+                self.dict[file_id].total = total
 
     def delete_file(self, file_id):
         self.dict.pop(file_id)
 
-    def add_chunk(self, file_id, data, order):
-        if file_id in self.dict:
-            self.dict[file_id].add_chunk(order, data)
-        else:
-            print("File is not exist!")
-            return 0
+    def add_chunk(self, file_id, path, order):
+        if file_id not in self.dict:
+            self.add_file(file_id, "undefined", 9999)
+        self.dict[file_id].add_chunk(order, path)
+        return 0
     
+    def add_undefine_chunk(self, path):
+        with open(path, 'rb') as fileobj:
+            first_line = fileobj.readline()
+            id, order = first_line.split()
+            self.add_chunk(int(id), path, int(order))
+
     def delete_chunk(self, file_id, order):
         if file_id in self.dict:
             self.dict[file_id].delect_chunk(order)
 
     def print_dict(self):
         for i in self.dict.keys():
-            print(f"file id:{i}, file name: {self.dict[i].name}{self.dict[i].suffix}, total: {self.dict[i].total}")
+            print(f"file id:{i}, file name: {self.dict[i].name}, total: {self.dict[i].total}")
             print(f"number of current chunks: {self.dict[i].number_of_chunk}")
             for j in self.dict[i].chunks_dict.keys():
                 print(f"-----order {j}: {self.dict[i].chunks_dict[j]}")
 
-    def isComplete(self, file_id):
+    def is_complete(self, file_id):
         return self.dict[file_id].isComplete()
     
-    def missingFile(self, file_id):
+    def missing_file(self, file_id):
         list_of_missing = []
         stop = self.dict[file_id].total
         for i in range(stop):
@@ -77,58 +122,50 @@ class Client_dict:
                 list_of_missing.append(i)
         return list_of_missing
     
+    def create_JSON(self, id, dirpath):
+        file_info = {}
+        if id in self.dict:
+            file_info['id'] = id
+            file_info['name'] = self.dict[id].name
+            file_info['total'] = self.dict[id].total
+        json_file_path = f'{dirpath}\{self.dict[id].name}.json'
+        with open(json_file_path, 'w') as json_file:
+            json.dump(file_info, json_file, indent=4)
+        return json_file_path
+
+    def add_file_from_JSON(self, JSONpath):
+        with open(JSONpath, 'r') as json_file:
+            file_info = json.load(json_file)
+            self.add_file(file_info.get("id"), file_info.get("name"), file_info.get("total"))
+
     def merge(self, other_client_dict : 'Client_dict'):
         for i in other_client_dict.dict.keys():
             if i not in self.dict:
-              self.add_file(i, other_client_dict.dict[i].name, other_client_dict.dict[i].suffix, other_client_dict.dict[i].total)
+              self.add_file(i, other_client_dict.dict[i].name, other_client_dict.dict[i].total)
             for j in other_client_dict.dict[i].chunks_dict.keys():
                 self.add_chunk(i, other_client_dict.dict[i].chunks_dict[j], j)
 
+    def split_chunks(self, id, fromfile, todir):
+        name = os.path.basename(fromfile)
+        filesize = os.path.getsize(fromfile)
+        total = math.ceil(filesize/chunksize)
+        self.add_file(id, name, total)
+        self.dict[id].split_chunks(id, fromfile, todir)
 
+    def merge_chunks(self, id, tofile):
+        if self.is_complete(id):
+            self.dict[id].merge_chunks(tofile)
 
-def split_chunks(fromfile, todir, chunksize=chunksize): 
-    if not os.path.exists(todir):                  # caller handles errors
-        os.mkdir(todir)                            # make dir, read/write parts
-    else:
-        for fname in os.listdir(todir):            # delete any existing files
-            os.remove(os.path.join(todir, fname)) 
-    partnum = 0
-    input = open(fromfile, 'rb')                   # use binary mode on Windows
-    while 1:                                       # eof=empty string from read
-        chunk = input.read(chunksize)              # get next part <= chunksize
-        if not chunk: break
-        partnum  = partnum+1
-        filename = os.path.join(todir, ('part%04d.txt' % partnum))
-        fileobj  = open(filename, 'wb')
-        fileobj.write(chunk)
-        fileobj.close()                            # or simply open(  ).write(  )
-    input.close(  )
-    assert partnum <= 9999                         # join sort fails if 5 digits
-    return partnum
-
-def join_chunks(fromdir, tofile):
-    output = open(tofile, 'wb')
-    parts  = os.listdir(fromdir)
-    parts.sort(  )
-    for filename in parts:
-        filepath = os.path.join(fromdir, filename)
-        fileobj  = open(filepath, 'rb')
-        while 1:
-            filebytes = fileobj.read(readsize)
-            if not filebytes: break
-            output.write(filebytes)
-        fileobj.close(  )
-    output.close(  )
 
 if __name__ == '__main__':
     client_dict = Client_dict()
     other_client_dict = Client_dict()
-    other_client_dict.add_file(0, "file0", ".txt", 5)
-    client_dict.add_file(1, "file1", ".zip", 3)
-    client_dict.add_file(3, "file3", ".png", 5)
+    other_client_dict.add_file(0, "file0.txt", 5)
+    client_dict.add_file(1, "file1.zip", 3)
+    client_dict.add_file(3, "file3.png", 5)
 
     # print(client_dict.dict.values())
-    chunk_test = Chunk("test", ".txt", 10)
+    chunk_test = Chunk("test.txt", 10)
     chunk_test.add_chunk(1, "abcd")
     # chunk_test.print_chunks()
     other_client_dict.add_chunk(0, "file0-data2", 2)
@@ -138,47 +175,28 @@ if __name__ == '__main__':
     client_dict.add_chunk(1, "file1-data5", 1)
     client_dict.add_chunk(1, "file1-data2", 2)
 
-    # client_dict.delete_chunk(1, 2)
 
     client_dict.add_chunk(3, "file3-data6", 6)
     client_dict.print_dict()
     client_dict.merge(other_client_dict)
     client_dict.print_dict()
-    print(f"full:{client_dict.isComplete(1)}")
-    print(f"Missing file:{client_dict.missingFile(1)}")
-    # client_dict.print_dict()
-    # zip_file_path = r'D:\Computer Network\BTL\testing_data\alice.zip'
-    # zip_output_path = r'D:\Computer Network\BTL\testing_data\alice_out.zip'
-    # output_folder = r'D:\Computer Network\BTL\testing_data\output_chunks'
-    # # create_chunk(zip_file_path, output_folder)
-    # # merge_chunk(output_folder, zip_output_path)
-    # split_chunks(zip_file_path, output_folder)
-    # join_chunks(output_folder, zip_output_path)
+    print(f"full:{client_dict.is_complete(1)}")
+    print(f"Missing file:{client_dict.missing_file(1)}")
+    zip_file_path = r'D:\Computer Network\BTL\testing_data\alice.zip'
+    zip_output_path = r'D:\Computer Network\BTL\testing_data\alice_out.zip'
+    output_folder = r'D:\Computer Network\BTL\testing_data\output_chunks'
+    output_json_folder = r'D:\Computer Network\BTL\testing_data'
+    client_dict.add_undefine_chunk(r'D:\Computer Network\BTL\testing_data\clone_chunks.txt')
+    client_dict.print_dict()
+    client_dict.split_chunks(5, zip_file_path, output_folder)
+    JSONpath = client_dict.create_JSON(5, output_json_folder)
+    client_dict.add_file_from_JSON(JSONpath)
+    client_dict.print_dict()
+    client_dict.merge_chunks(5, zip_output_path)
+
 
 LOCAL_PORT = 22822
 SERVER_PORT = 12345
-
-class File:
-    def __init__(self):
-        self.path = ""
-        self.size = self.get_file_size(self.path)
-        self.chunk = self.get_total_chunk()
-        self.chunkDict = {}
-
-    def get_file_size(self, path):
-        return os.path.getsize(path)
-        
-    def get_total_chunk(self):
-        # Use for upload client only
-        total_chunk = 0
-
-        return total_chunk
-
-    def merge_chunk(self):
-        return
-
-    def is_enough(self):
-        return len(self.chunkDict) == self.chunk
 
 class client:
     def __init__(self):
