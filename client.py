@@ -237,15 +237,22 @@ class client:
             cmd = msg_split[1]
 
             if "Welcome" in cmd:
-                self.client_socket.send(f'{LOCAL_PORT}'.encode("utf-8"))
+                self.client_socket.send(f'{FILE_PORT}'.encode("utf-8"))
 
-            elif "Download" in cmd:
+            elif "Upload Successfully" in cmd:
                 print(receive_message)
 
-                if len(msg_split) == 4:
+                if len(msg_split) == 3:
+                    uniqueID = int(msg_split[2]) # Get unique ID
+
+                self.log.append(receive_message)
+
+            elif "Download Successfully" in cmd:
+                print(receive_message)
+
+                if len(msg_split) == 3:
                     # Get information
-                    file_info = eval(msg_split[2]) # convert back to dict
-                    peer_info = eval(msg_split[3])
+                    peer_info = eval(msg_split[2])
 
                     # Random choose a client to connect
                     rand_int = random.randint(0, len(peer_info['ip']) - 1)
