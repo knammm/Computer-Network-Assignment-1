@@ -53,7 +53,7 @@ class tracking_server:
 
     def handle_clients(self, connection, address):
         self.log.append(f'[System Anouncement] Accept new connection from {address} !')
-        welcome_message = "Welcome to P2P File Sharing application !".encode("utf-8")
+        welcome_message = "[Announcement]--Welcome to P2P File Sharing application !--".encode("utf-8")
         connection.send(welcome_message)
 
         # Receive IP and port from client
@@ -75,7 +75,6 @@ class tracking_server:
                     peers_info = {}
                     clients_ip = self.file_client[magnet_text]
                     ports = []
-                    self.file_client[magnet_text].append(clientIP) # Append new IP
                     for client in clients_ip:
                         ports = ports.append(self.client_servers[client])
 
@@ -85,11 +84,13 @@ class tracking_server:
                     # torrent file
                     torrent_info = self.map_torrent[magnet_text]
 
-                    send_data = "[Anouncement]--GET_SUCCESSFULLY-- "  # Split by space
-                    send_data += f"{torrent_info} "
+                    send_data = "[Anouncement]--Download Successfully--"  # Split by --
+                    send_data += f"{torrent_info}--"
                     send_data += f"{peers_info}"
+
+                    self.file_client[magnet_text].append(clientIP)  # Append new IP
                 else:
-                    send_data = "[Warning]--GET_FAILED-- NO_FILE_FOUND"
+                    send_data = "[Warning]--Download Failed--No File Found"
 
                 self.log.append(f"[System Anouncement] {clientIP}: Download")
                 connection.send(send_data.encode("utf-8"))
@@ -101,13 +102,13 @@ class tracking_server:
                 send_data = ""
                 # Import to the hash table
                 if magnet_text in self.map_torrent.keys():
-                    send_data += "[Failure]--UPLOAD_FAILED-- FILE_IS_EXISTED"
+                    send_data += "[Failure]--Upload Failed--FILE_IS_EXISTED"
                 else:
                     # Update torrent table and file-clientip table
                     self.map_torrent[magnet_text] = torrent_content
                     self.file_client[magnet_text] = []
                     self.file_client[magnet_text].append(clientIP)
-                    send_data += "[Anouncement]--UPLOAD_SUCCESSFULLY--"
+                    send_data += "[Anouncement]--Upload Successfully--"
 
                 self.log.append(f"[System Anouncement] {clientIP}: Upload")
                 connection.send(send_data.encode("utf-8"))
@@ -131,7 +132,7 @@ class tracking_server:
 
             elif client_cmd == 'Waiting':
                 # Client did not send any massage -> refers to '\0'
-                send_data = "[Warning]--Waiting for the command--".encode("utf-8")
+                send_data = "[Warning]--Waiting--".encode("utf-8")
                 connection.send_data(send_data)
 
             else:
@@ -141,6 +142,7 @@ class tracking_server:
     def start_server(self):
         while True:
             try:
+                print(self.log)
                 clientSocket, clientAddress = self.server_socket.accept()
                 clientCommand = threading.Thread(target=self.handle_clients, arg=(clientSocket, clientAddress))
                 clientCommand.start()
@@ -150,4 +152,43 @@ class tracking_server:
 
 if __name__ == "__main__":
     server = tracking_server()
-    server.start_server()
+    magnet_text = "alice"
+    server.map_torrent[magnet_text] = {'name': 'alice.txt', 'length': 500, 'chunk': 50, 'chunksize': 10}
+    server.file_client[magnet_text] = ["1.1.1.1", "10.1.1.1"]
+    server.client_servers = {"1.1.1.1": 9090, "10.1.1.1": 2000, "2.1.41.2": 6969}
+    magnet_text_test = "alice"
+    send_data = ""
+    if magnet_text_test in server.file_client:
+        # Process peers dictionary
+        peers_info = {}
+        clients_ip = server.file_client[magnet_text_test]
+        ports = []
+
+        for client in clients_ip:
+            ports.append(server.client_servers[client])
+
+        # peers_info['id'] = f"{clientIP}:{clientPort}"
+        peers_info['ip'] = clients_ip
+        peers_info['port'] = ports
+        # torrent file
+        torrent_info = server.map_torrent[magnet_text_test]
+
+        send_data = "[Anouncement]--Download Successfully--"  # Split by --
+        send_data += f"{torrent_info}--"
+        send_data += f"{peers_info}"
+
+        server.file_client[magnet_text_test].append('9.9.9.9')
+        print(send_data)
+
+    split_data = send_data.split("--")
+
+    announcement = split_data[0]
+    success_message = split_data[1]
+    file_info = eval(split_data[2])  # Use eval to convert the string representation of dictionary back to dictionary
+    peer_info = eval(split_data[3])  # Use eval to convert the string representation of dictionary back to dictionary
+
+    print(announcement)
+    print(success_message)
+    print(file_info)
+    print(peer_info['port'][1] + 1)
+
