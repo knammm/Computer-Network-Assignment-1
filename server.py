@@ -173,3 +173,6 @@ if __name__ == "__main__":
     print(success_message)
     print(peer_info)
 
+    print("=======")
+    peer_info['ip'].remove("1.1.1.1")
+    print(peer_info)
