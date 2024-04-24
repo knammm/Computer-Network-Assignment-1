@@ -5,6 +5,7 @@ import socket
 import math
 import random
 import time
+import threading
 
 kilobytes = 1024
 chunksize = kilobytes * 100
@@ -170,16 +171,19 @@ class Client_dict:
 
 class client:
     def __init__(self):
-        self.file_list = []
+        self.file_list = Client_dict()
         self.client_host = self.get_local_ip()
         self.client_port = LOCAL_PORT
         self.server_host = ""
         self.server_port = SERVER_PORT
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.file_soket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.message = ""
         self.log = []
         self.upload_path = ""
         self.download_path = ""
+        self.json_path = ""
+        self.chunk_path = ""
 
     def get_local_ip(self):
         try:
@@ -222,13 +226,54 @@ class client:
     def get_files_list(self):
         return self.file_list
 
-    def send_chunk_to_client(self, clientInfo):
-        return
+    def send_chunk_to_client(self, clientConnect, clientSocket):
+        print(f'Prepare to serve {clientSocket}...')
+        uniqueID = clientConnect.recv(BYTES).decode("utf-8")
+        chunk_files = os.listdir(self.chunk_path)
+        correct_chunk_files = [file for file in chunk_files if file.startswith(f'{uniqueID}_')]
+        print(correct_chunk_files)
+        clientConnect.send(f"{len(correct_chunk_files)}".encode("utf-8")) # send file count
+        correct_path = []
+        for file in correct_chunk_files:
+            correct_path.append(self.chunk_path + '\\' + file)
+
+        for path in correct_path:
+            with open(path, "rb") as f:
+                text = f.read()
+                clientConnect.sendall(text)
+
+            status_file = clientConnect.recv(BYTES).decode("utf-8")
+
+            if status_file == "OK":
+                print("Continue")
+            else:
+                print("Fail")
+                break
+
+        time.sleep(2)
+
 
     def receive_chunk_from_client(self, clientInfo):
         return
 
-    def handle_server(self, connection, address):
+    def open_file_serving_socket(self):
+        self.file_soket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            self.file_soket.bind((self.get_client_host(), FILE_PORT))
+        except:
+            print("Something went wrong")
+
+        self.file_soket.listen()
+        print(f"The file serving socket is {self.file_soket.getsockname()}")
+        while True:
+            try:
+                peer_client, peer_client_socket = self.file_soket.accept()
+                s_file_client = threading.Thread(target=self.send_chunk_to_client, args=(peer_client, peer_client_socket))
+                s_file_client.start()
+            except:
+                pass
+
+    def handle_server(self, ID):
         self.client_socket.connect((self.get_server_host(), SERVER_PORT))
 
         while True:
@@ -260,8 +305,25 @@ class client:
                     new_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     new_socket.connect(connect_tuple)
 
-                    # Apply sending chunk algorithm here...
+                    # Initialize message
+                    new_socket.send(f"{ID}".encode("utf-8")) # Send uniqueID
+                    size = new_socket.recv(BYTES).decode("utf-8")
+                    for i in range(1, int(size) + 1):
+                        path = self.chunk_path + "\\" + f"{ID}_{i}.txt"
+                        print(path)
+                        text = new_socket.recv(BYTES)
+                        try:
+                            with open(path, 'wb') as file:
+                                file.write(text)
+                            print(f"Text file '{path}' created successfully.")
+                            new_socket.send(f"OK".encode("utf-8"))
+                        except IOError as e:
+                            print(f"Error: {e}")
+                            new_socket.send(f"Fail".encode("utf-8"))
+                            break
+                        file.close()
 
+                    print("Finished")
                     # Close connection
                     new_socket.close()
 
@@ -348,3 +410,31 @@ if __name__ == '__main__':
     client_dict.add_file_from_JSON(JSONpath)
     client_dict.print_dict()
     client_dict.merge_chunks(5, zip_output_path)
+
+    # uniqueID = "part"
+    # # send_data = data
+    # # clientConnect.send(f"{send_data}".encode("utf-8"))
+    # dir = r'D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\git\testing_data\output_chunks'
+    # chunk_files = os.listdir(dir)
+    # print(chunk_files)
+    # correct_chunk_files = [file for file in chunk_files if file.startswith(f'{uniqueID}')]
+    # print(correct_chunk_files)
+    # correct_path = []
+    # for file in correct_chunk_files:
+    #     correct_path.append(dir + '\\' + file)
+    #
+    # for path in correct_path:
+    #     print(path)
+    #
+    #     size = 10
+    #     ID = "knam"
+    #     for i in range(1, int(size) + 1):
+    #         path = dir + "\\" + f"{ID}_{i}.txt"
+    #         print(path)
+    #         text = "ABC"
+    #         try:
+    #             with open(path, 'w') as file:
+    #                 file.write(text)
+    #             print(f"Text file '{path}' created successfully.")
+    #         except IOError as e:
+    #             print(f"Error: {e}")
