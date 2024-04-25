@@ -51,25 +51,27 @@ class tracking_server:
         return fileList
 
     def handle_clients(self, connection, address):
-        print(f'[System Anouncement] Accept new connection from {address} !')
-        self.log.append(f'[System Anouncement] Accept new connection from {address} !')
+        print(f'[System Anouncement] Accept new connection from {address[0]} !')
+        self.log.append(f'[System Anouncement] Accept new connection from {address[0]} !')
         welcome_message = "[Announcement]--Welcome to P2P File Sharing application !--".encode("utf-8")
         connection.send(welcome_message)
 
         # Receive IP and port from client
         init_message = connection.recv(BYTES).decode("utf-8")
-        clientIP = address
+        print(init_message)
+        clientIP = address[0]
         clientPort = init_message # send the FILE_PORT
         self.client_servers[clientIP] = clientPort
 
         while True:
             recv_message = connection.recv(BYTES).decode("utf-8")
-            recv_message.split(" ")
-            client_cmd = recv_message[0]
-
+            
+            frag_message = recv_message.split(" ")
+            client_cmd = frag_message[0]
+            print(client_cmd)
             if client_cmd == 'Download':
                 # Client sent 'Download'
-                magnet_text = recv_message[1]
+                magnet_text = frag_message[1]
                 if magnet_text in self.file_client:
                     # Process peers dictionary
                     peers_info = {}
@@ -94,11 +96,11 @@ class tracking_server:
 
             elif client_cmd == 'Upload':
                 # Send a unique ID
+                print("Upload successfully")
                 send_data = f"[Announcement]--Upload Successfully--{self.counter}"
                 self.file_client[self.counter] = []
                 self.file_client[self.counter].append(clientIP)
                 self.counter += 1
-
                 self.log.append(f"[System Anouncement] {clientIP}: Upload")
                 connection.send(send_data.encode("utf-8"))
 
@@ -133,7 +135,7 @@ class tracking_server:
             try:
                 
                 clientSocket, clientAddress = self.server_socket.accept()
-                clientCommand = threading.Thread(target=self.handle_clients, arg=(clientSocket, clientAddress))
+                clientCommand = threading.Thread(target=self.handle_clients(clientSocket,clientAddress))
                 clientCommand.start()
             except:
                 pass

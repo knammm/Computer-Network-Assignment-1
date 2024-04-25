@@ -13,7 +13,7 @@ BYTES = 102400
 
 LOCAL_PORT = 22822
 SERVER_PORT = 18520
-FILE_PORT = 228223
+# FILE_PORT = 228223
 
 id_download = {}
 id_upload = {}
@@ -273,12 +273,14 @@ class client:
 
     def open_file_serving_socket(self):
         self.file_soket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        print(self.get_client_host())
         try:
-            self.file_soket.bind((self.get_client_host(), FILE_PORT))
+            self.file_soket.bind(("192.168.32.104", LOCAL_PORT))
+            
         except:
             print("Something went wrong")
 
-        self.file_soket.listen(1)
+        self.file_soket.listen()
         print(f"The file serving socket is {self.file_soket.getsockname()}")
         while True:
             try:
@@ -297,7 +299,7 @@ class client:
             cmd = msg_split[1]
 
             if "Welcome" in cmd:
-                self.client_socket.send(f'{FILE_PORT}'.encode("utf-8"))
+                self.client_socket.send(f'{LOCAL_PORT}'.encode("utf-8"))
 
             elif "Upload Successfully" in cmd:
                 print(receive_message)  
@@ -309,6 +311,7 @@ class client:
                     general_dict.add_file(uniqueID, name, total_chunks)
                     general_dict.split_chunks(uniqueID, self.upload_path, self.chunk_path)
                 self.log.append(receive_message)
+                print(f"Upload successfully {uniqueID}")
 
             elif "Download Successfully" in cmd:
                 print(receive_message)
@@ -401,10 +404,8 @@ class client:
             cmd_split = client_cmd.split(" ")
             cmd = cmd_split[0]
 
-            if cmd == "Upload" and (len(cmd_split) == 3):
-                magnet_text = cmd_split[1]
-                contents = cmd_split[2]
-                send_data = f"Upload {magnet_text} {contents}"
+            if cmd == "Upload":
+                send_data = f"Upload"
                 self.client_socket.send(send_data.encode("utf-8"))
                 self.set_message(" ")
 
@@ -430,8 +431,8 @@ class client:
     def start_client(self):
         t1 = threading.Thread(target=self.handle_server)
         t1.start()
-        # t2 = threading.Thread(target=self.open_file_serving_socket)
-        # t2.start()
+        t2 = threading.Thread(target=self.open_file_serving_socket)
+        t2.start()
         return
 
 new_client = client()
@@ -464,7 +465,8 @@ if __name__ == '__main__':
    
     
     new_client.start_client()
-    new_client.set_message("Upload")
+    while(1):
+        new_client.set_message("Upload")
     # size = 20
     # ID = uniqueID
     # for i in range(1, int(size) + 1):
