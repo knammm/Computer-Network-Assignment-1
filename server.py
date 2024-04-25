@@ -3,6 +3,8 @@ import socket
 import threading
 
 BYTES = 102400
+
+
 class tracking_server:
     def __init__(self):
         # Init socket properties
@@ -58,38 +60,43 @@ class tracking_server:
 
         # Receive IP and port from client
         init_message = connection.recv(BYTES).decode("utf-8")
-        print(init_message)
         clientIP = address[0]
-        clientPort = init_message # send the FILE_PORT
+        clientPort = int(init_message)  # send the FILE_PORT
         self.client_servers[clientIP] = clientPort
+
+        print(self.client_servers)
 
         while True:
             recv_message = connection.recv(BYTES).decode("utf-8")
-            
+
             frag_message = recv_message.split(" ")
             client_cmd = frag_message[0]
-            print(client_cmd)
+
+            print(f"Receive: {recv_message}")
+
             if client_cmd == 'Download':
                 # Client sent 'Download'
-                magnet_text = frag_message[1]
+                magnet_text = int(frag_message[1])
                 if magnet_text in self.file_client:
                     # Process peers dictionary
+                    print(f"Hello: {self.file_client}")
+                    print(f"Client_Port: {self.client_servers}")
                     peers_info = {}
                     clients_ip = self.file_client[magnet_text]
                     ports = []
                     for client in clients_ip:
-                        ports = ports.append(self.client_servers[client])
+                        ports.append(self.client_servers[client])
 
                     # peers_info['id'] = f"{clientIP}:{clientPort}"
                     peers_info['ip'] = clients_ip
                     peers_info['port'] = ports
 
-                    send_data = f"[Anouncement]--Download Successfully--"  # Split by --
+                    send_data = f"[Anouncement]--Download Successfully--{magnet_text}--"  # Split by --
                     send_data += f"{peers_info}"
 
                     self.file_client[magnet_text].append(clientIP)  # Append new IP
                 else:
-                    send_data = f"[Failure]--Download Failed--No File Found--{magnet_text}--"
+                    send_data = f"[Failure]--Download Failed--No File Found--"
 
                 self.log.append(f"[System Anouncement] {clientIP}: Download")
                 connection.send(send_data.encode("utf-8"))
@@ -122,8 +129,8 @@ class tracking_server:
 
             elif client_cmd == 'Waiting':
                 # Client did not send any massage -> refers to '\0'
-                send_data = "[Warning]--Waiting--".encode("utf-8")
-                connection.send_data(send_data)
+                send_data = f'[Warning]--Waiting--'.encode("utf-8")
+                connection.send(send_data)
 
             else:
                 send_message = f'[Failure]--Invalid Format--'.encode("utf-8")
@@ -131,11 +138,9 @@ class tracking_server:
 
     def start_server(self):
         while True:
-            print(self.log)
             try:
-                
                 clientSocket, clientAddress = self.server_socket.accept()
-                clientCommand = threading.Thread(target=self.handle_clients(clientSocket,clientAddress))
+                clientCommand = threading.Thread(target=self.handle_clients(clientSocket, clientAddress))
                 clientCommand.start()
             except:
                 pass
