@@ -7,7 +7,7 @@ class tracking_server:
     def __init__(self):
         # Init socket properties
         self.host = self.get_local_ip()
-        self.port = 12345
+        self.port = 18520
 
         # Init log
         self.log = []  # List of string
@@ -51,6 +51,7 @@ class tracking_server:
         return fileList
 
     def handle_clients(self, connection, address):
+        print(f'[System Anouncement] Accept new connection from {address} !')
         self.log.append(f'[System Anouncement] Accept new connection from {address} !')
         welcome_message = "[Announcement]--Welcome to P2P File Sharing application !--".encode("utf-8")
         connection.send(welcome_message)
@@ -81,12 +82,12 @@ class tracking_server:
                     peers_info['ip'] = clients_ip
                     peers_info['port'] = ports
 
-                    send_data = "[Anouncement]--Download Successfully--"  # Split by --
+                    send_data = f"[Anouncement]--Download Successfully--"  # Split by --
                     send_data += f"{peers_info}"
 
                     self.file_client[magnet_text].append(clientIP)  # Append new IP
                 else:
-                    send_data = "[Failure]--Download Failed--No File Found"
+                    send_data = f"[Failure]--Download Failed--No File Found--{magnet_text}--"
 
                 self.log.append(f"[System Anouncement] {clientIP}: Download")
                 connection.send(send_data.encode("utf-8"))
@@ -128,8 +129,9 @@ class tracking_server:
 
     def start_server(self):
         while True:
+            print(self.log)
             try:
-                print(self.log)
+                
                 clientSocket, clientAddress = self.server_socket.accept()
                 clientCommand = threading.Thread(target=self.handle_clients, arg=(clientSocket, clientAddress))
                 clientCommand.start()
@@ -139,40 +141,41 @@ class tracking_server:
 
 if __name__ == "__main__":
     server = tracking_server()
-    magnet_text = "alice"
-    server.file_client[magnet_text] = ["1.1.1.1", "10.1.1.1"]
-    server.client_servers = {"1.1.1.1": 9090, "10.1.1.1": 2000, "2.1.41.2": 6969}
-    magnet_text_test = "alice"
-    send_data = ""
-    if magnet_text_test in server.file_client:
-        # Process peers dictionary
-        peers_info = {}
-        clients_ip = server.file_client[magnet_text_test]
-        ports = []
+    server.start_server()
+    # magnet_text = "alice"
+    # server.file_client[magnet_text] = ["1.1.1.1", "10.1.1.1"]
+    # server.client_servers = {"1.1.1.1": 9090, "10.1.1.1": 2000, "2.1.41.2": 6969}
+    # magnet_text_test = "alice"
+    # send_data = ""
+    # if magnet_text_test in server.file_client:
+    #     # Process peers dictionary
+    #     peers_info = {}
+    #     clients_ip = server.file_client[magnet_text_test]
+    #     ports = []
 
-        for client in clients_ip:
-            ports.append(server.client_servers[client])
+    #     for client in clients_ip:
+    #         ports.append(server.client_servers[client])
 
-        # peers_info['id'] = f"{clientIP}:{clientPort}"
-        peers_info['ip'] = clients_ip
-        peers_info['port'] = ports
+    #     # peers_info['id'] = f"{clientIP}:{clientPort}"
+    #     peers_info['ip'] = clients_ip
+    #     peers_info['port'] = ports
 
-        send_data = "[Anouncement]--Download Successfully--"  # Split by --
-        send_data += f"{peers_info}"
+    #     send_data = "[Anouncement]--Download Successfully--"  # Split by --
+    #     send_data += f"{peers_info}"
 
-        server.file_client[magnet_text_test].append('9.9.9.9')
-        print(send_data)
+    #     server.file_client[magnet_text_test].append('9.9.9.9')
+    #     print(send_data)
 
-    split_data = send_data.split("--")
+    # split_data = send_data.split("--")
 
-    announcement = split_data[0]
-    success_message = split_data[1]
-    peer_info = eval(split_data[2])  # Use eval to convert the string representation of dictionary back to dictionary
+    # announcement = split_data[0]
+    # success_message = split_data[1]
+    # peer_info = eval(split_data[2])  # Use eval to convert the string representation of dictionary back to dictionary
 
-    print(announcement)
-    print(success_message)
-    print(peer_info)
+    # print(announcement)
+    # print(success_message)
+    # print(peer_info)
 
-    print("=======")
-    peer_info['ip'].remove("1.1.1.1")
-    print(peer_info)
+    # print("=======")
+    # peer_info['ip'].remove("1.1.1.1")
+    # print(peer_info)

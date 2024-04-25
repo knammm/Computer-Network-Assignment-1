@@ -12,9 +12,11 @@ readsize = kilobytes
 BYTES = 102400
 
 LOCAL_PORT = 22822
-SERVER_PORT = 12345
+SERVER_PORT = 18520
 FILE_PORT = 228223
 
+id_download = {}
+id_upload = {}
 class Chunk:
     chunks_dict = {}
 
@@ -132,6 +134,16 @@ class Client_dict:
             if i not in self.dict[file_id].chunks_dict:
                 list_of_missing.append(i)
         return list_of_missing
+    
+    def add_chunks_from_dir(self, dir, id):
+        all_files = os.listdir(dir)
+        chunk_files = [file for file in all_files if file.startswith(f'{id}_')]
+        for filename in chunk_files:
+            filepath = f"{dir}\{filename}"
+            with open(filepath, 'rb') as fileobj:
+                content = fileobj.readline()
+                values = content.split()
+                self.add_chunk(id, filepath, int(values[1]))
 
     def create_JSON(self, id, dirpath):
         file_info = {}
@@ -147,7 +159,8 @@ class Client_dict:
     def add_file_from_JSON(self, JSONpath):
         with open(JSONpath, 'r') as json_file:
             file_info = json.load(json_file)
-            self.add_file(file_info.get("id"), file_info.get("name"), file_info.get("total"))
+            self.add_file(int(file_info.get("id")), file_info.get("name"), int(file_info.get("total")))
+            return int(file_info.get("id"))
 
     def merge(self, other_client_dict: 'Client_dict'):
         for i in other_client_dict.dict.keys():
@@ -167,6 +180,7 @@ class Client_dict:
         if self.is_complete(id):
             self.dict[id].merge_chunks(tofile)
 
+general_dict = Client_dict()
 
 class client:
     def __init__(self):
@@ -183,6 +197,8 @@ class client:
         self.download_path = ""
         self.json_path = ""
         self.chunk_path = ""
+        self.id = -1
+        self.status = 0
 
     def get_local_ip(self):
         try:
@@ -262,7 +278,7 @@ class client:
         except:
             print("Something went wrong")
 
-        self.file_soket.listen()
+        self.file_soket.listen(1)
         print(f"The file serving socket is {self.file_soket.getsockname()}")
         while True:
             try:
@@ -272,7 +288,7 @@ class client:
             except:
                 pass
 
-    def handle_server(self, ID):
+    def handle_server(self):
         self.client_socket.connect((self.get_server_host(), SERVER_PORT))
 
         while True:
@@ -284,19 +300,23 @@ class client:
                 self.client_socket.send(f'{FILE_PORT}'.encode("utf-8"))
 
             elif "Upload Successfully" in cmd:
-                print(receive_message)
+                print(receive_message)  
 
                 if len(msg_split) == 3:
                     uniqueID = int(msg_split[2]) # Get unique ID
-
+                    name = os.path.basename(self.upload_path)
+                    total_chunks = os.path.getsize(self.upload_path)/chunksize
+                    general_dict.add_file(uniqueID, name, total_chunks)
+                    general_dict.split_chunks(uniqueID, self.upload_path, self.chunk_path)
                 self.log.append(receive_message)
 
             elif "Download Successfully" in cmd:
                 print(receive_message)
 
-                if len(msg_split) == 3:
+                if len(msg_split) == 4:
                     # Get information
-                    peer_info = eval(msg_split[2])
+                    self.id = int(msg_split[2])
+                    peer_info = eval(msg_split[3])
 
                     # Initialize message
                     chunkIdx = 1
@@ -313,11 +333,11 @@ class client:
                         try:
                             new_socket.connect(connect_tuple)
 
-                            new_socket.send(f"{ID}--{chunkIdx}".encode("utf-8")) # Send uniqueID--chunkStart
+                            new_socket.send(f"{self.id}--{chunkIdx}".encode("utf-8")) # Send uniqueID--chunkStart
                             size = new_socket.recv(BYTES).decode("utf-8")
 
                             for i in range(0, int(size)):
-                                path = self.chunk_path + "\\" + f"{ID}_{chunkIdx}.txt"
+                                path = self.chunk_path + "\\" + f"{self.id}_{chunkIdx}.txt"
                                 print(path)
                                 text = new_socket.recv(BYTES)
                                 try:
@@ -337,6 +357,10 @@ class client:
                             # Handle enough chunk => break
                             if (chunkIdx - 1) == total:
                                 print("Success")
+                                self.status = 1
+                                id = general_dict.add_file_from_JSON(self.json_path)
+                                general_dict.add_chunks_from_dir(self.chunk_path, id)
+                                general_dict.merge_chunks(id, self.download_path)
                                 break
 
                             if chunkIdx < total:
@@ -345,8 +369,9 @@ class client:
                                     print("Fail - No peer have enough chunk")
                                     # removing chunk files
                                     files = os.listdir(self.chunk_path)
+                                    self.status = -1
                                     for file in files:
-                                        if file.startswith(f"{ID}_"):
+                                        if file.startswith(f"{self.id}_"):
                                             os.remove(os.path.join(self.chunk_path, file))
                                     break
 
@@ -403,63 +428,43 @@ class client:
         self.client_socket.close()
 
     def start_client(self):
+        t1 = threading.Thread(target=self.handle_server)
+        t1.start()
+        # t2 = threading.Thread(target=self.open_file_serving_socket)
+        # t2.start()
         return
+
+new_client = client()
+
 
 
 if __name__ == '__main__':
-    # client_dict = Client_dict()
-    # other_client_dict = Client_dict()
-    # other_client_dict.add_file(0, "file0.txt", 5)
-    # client_dict.add_file(1, "file1.zip", 3)
-    # client_dict.add_file(3, "file3.png", 5)
-    #
-    # # print(client_dict.dict.values())
-    # chunk_test = Chunk("test.txt", 10)
-    # chunk_test.add_chunk(1, "abcd")
-    # # chunk_test.print_chunks()
-    # other_client_dict.add_chunk(0, "file0-data2", 2)
-    # other_client_dict.add_chunk(0, "file0-data1", 1)
-    #
-    # client_dict.add_chunk(1, "file1-data4", 0)
-    # client_dict.add_chunk(1, "file1-data5", 1)
-    # client_dict.add_chunk(1, "file1-data2", 2)
-    #
-    # client_dict.add_chunk(3, "file3-data6", 6)
-    # client_dict.print_dict()
-    # client_dict.merge(other_client_dict)
-    # client_dict.print_dict()
-    # print(f"full:{client_dict.is_complete(1)}")
-    # print(f"Missing file:{client_dict.missing_file(1)}")
-    # zip_file_path = r'D:\Computer Network\BTL\testing_data\alice.zip'
-    # zip_output_path = r'D:\Computer Network\BTL\testing_data\alice_out.zip'
-    # output_folder = r'D:\Computer Network\BTL\testing_data\output_chunks'
-    # output_json_folder = r'D:\Computer Network\BTL\testing_data'
-    # client_dict.add_undefine_chunk(r'D:\Computer Network\BTL\testing_data\clone_chunks.txt')
-    # client_dict.print_dict()
-    # client_dict.split_chunks(5, zip_file_path, output_folder)
-    # JSONpath = client_dict.create_JSON(5, output_json_folder)
-    # client_dict.add_file_from_JSON(JSONpath)
-    # client_dict.print_dict()
-    # client_dict.merge_chunks(5, zip_output_path)
-
     uniqueID = "5"
     # send_data = data
     # clientConnect.send(f"{send_data}".encode("utf-8"))
-    dir = r'D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\git\testing_data\output_chunks'
-    chunk_files = os.listdir(dir)
-    print(chunk_files)
-    correct_chunk_files = [file for file in chunk_files if file.startswith(f'{uniqueID}')]
-    print(correct_chunk_files)
-    correct_path = []
-    sorted_file_names = sorted(correct_chunk_files, key=lambda x: int(x.split('_')[1].split(".")[0]))
-    for file in sorted_file_names:
-        correct_path.append(dir + '\\' + file)
+    # dir = r'D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\git\testing_data\output_chunks'
+    # chunk_files = os.listdir(dir)
+    # print(chunk_files)
+    # correct_chunk_files = [file for file in chunk_files if file.startswith(f'{uniqueID}')]
+    # print(correct_chunk_files)
+    # correct_path = []
+    # sorted_file_names = sorted(correct_chunk_files, key=lambda x: int(x.split('_')[1].split(".")[0]))
+    # for file in sorted_file_names:
+    #     correct_path.append(dir + '\\' + file)
 
-    print(len(correct_path))
+    # print(len(correct_path))
 
-    for path in correct_path:
-        print(path)
-
+    # for path in correct_path:
+    #     print(path)
+    new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data")
+    new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\alice.zip")
+    new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
+    new_client.json_path = "D:\Computer Network\BTL\testing_data\alice.zip.json"
+    new_client.set_server_host("192.168.32.104")
+   
+    
+    new_client.start_client()
+    new_client.set_message("Upload")
     # size = 20
     # ID = uniqueID
     # for i in range(1, int(size) + 1):
@@ -471,7 +476,3 @@ if __name__ == '__main__':
     #         print(f"Text file '{path}' created successfully.")
     #     except IOError as e:
     #         print(f"Error: {e}")
-
-    print("-----------------------")
-    for i in range(10, 20):
-        print(correct_path[i])
