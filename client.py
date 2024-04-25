@@ -405,7 +405,136 @@ class client:
     def start_client(self):
         return
 
+new_client = client()
 
+class ClientConfigUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Client Configuration")
+
+        # Server IP
+        self.server_ip_label = tk.Label(root, text="Server IP:")
+        self.server_ip_label.grid(row=0, column=0, sticky="e")
+        self.server_ip_entry = tk.Entry(root)
+        self.server_ip_entry.grid(row=0, column=1)
+
+        # Server Port
+        self.server_port_label = tk.Label(root, text="Server Port:")
+        self.server_port_label.grid(row=1, column=0, sticky="e")
+        self.server_port_entry = tk.Entry(root, state='readonly')
+        self.server_port_entry.grid(row=1, column=1)
+        self.custom_port_var = tk.BooleanVar()
+        self.custom_port_checkbox = tk.Checkbutton(root, text="Custom", variable=self.custom_port_var, command=self.toggle_custom_port)
+        self.custom_port_checkbox.grid(row=1, column=2)
+
+        # Directory Path
+        self.dir_path_label = tk.Label(root, text="Directory Path:")
+        self.dir_path_label.grid(row=2, column=0, sticky="e")
+        self.dir_path_entry = tk.Entry(root)
+        self.dir_path_entry.grid(row=2, column=1)
+        self.dir_path_button = tk.Button(root, text="Browse", command=self.browse_dir_path)
+        self.dir_path_button.grid(row=2, column=2)
+
+        # File Path
+        self.file_path_label = tk.Label(root, text="File Path:")
+        self.file_path_label.grid(row=3, column=0, sticky="e")
+        self.file_path_entry = tk.Entry(root)
+        self.file_path_entry.grid(row=3, column=1)
+        self.file_path_button = tk.Button(root, text="Browse", command=self.browse_file_path)
+        self.file_path_button.grid(row=3, column=2)
+
+        # Submit Button
+        self.submit_button = tk.Button(root, text="Submit", command=self.submit)
+        self.submit_button.grid(row=4, columnspan=2)
+
+        # Hidden Port Entry
+        self.port_entry = tk.Entry(root)
+        self.port_entry.grid(row=1, column=1)
+        self.port_entry.grid_remove()
+
+    def browse_dir_path(self):
+        dir_path = filedialog.askdirectory()
+        self.dir_path_entry.delete(0, tk.END)
+        self.dir_path_entry.insert(0, dir_path)
+
+    def browse_file_path(self):
+        file_path = filedialog.askdirectory()
+        self.file_path_entry.delete(0, tk.END)
+        self.file_path_entry.insert(0, file_path)
+
+    def toggle_custom_port(self):
+        if self.custom_port_var.get():
+            self.server_port_entry.config(state='normal')
+            self.server_port_entry.delete(0, tk.END)
+        else:
+            self.server_port_entry.config(state='readonly')
+            self.server_port_entry.delete(0, tk.END)
+            self.port_entry.delete(0, tk.END)
+
+    def submit(self):
+        # Extract server IP, port, directory path, and file path
+        server_ip = self.server_ip_entry.get()
+        server_port = self.server_port_entry.get() if self.custom_port_var.get() else ""
+        dir_path = self.dir_path_entry.get()
+        file_path = self.file_path_entry.get()
+
+        # Validation
+        if not server_ip:
+            messagebox.showerror("Error", "Please enter the Server IP.")
+            return
+
+        if not dir_path:
+            messagebox.showerror("Error", "Please select a Directory Path.")
+            return
+
+        if not os.path.exists(dir_path):
+            messagebox.showerror("Error", "Directory Path does not exist.")
+            return
+
+        if not file_path:
+            messagebox.showerror("Error", "Please select a File Path.")
+            return
+
+        if self.custom_port_var.get():
+            try:
+                server_port = int(server_port)  # Get server port from user input
+            except ValueError:
+                messagebox.showerror("Error", "Please enter a valid Server Port.")
+                return
+
+        # Create an instance of the client
+        try:
+            client_instance = client()
+
+            # Set server IP and port
+            # Set server IP and port
+            client_instance.set_server_host(server_ip)
+            client_instance.set_server_port(server_port)  # Set custom port if provided
+
+            # Set client upload and download paths
+            client_instance.set_client_upload_path(dir_path)
+            client_instance.set_client_download_path(dir_path)  # Assume same path for download
+
+            # Ensure that the chunk_path attribute is properly set
+            client_instance.chunk_path = dir_path  # Set the chunk path
+
+            # Start file serving socket in a separate thread
+            file_serving_thread = threading.Thread(target=client_instance.open_file_serving_socket)
+            file_serving_thread.daemon = True
+            file_serving_thread.start()
+
+            # Start server communication in a separate thread
+            server_communication_thread = threading.Thread(target=client_instance.handle_server)
+            server_communication_thread.daemon = True
+            server_communication_thread.start()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to start client: {e}")
+            return
+
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     app = ClientConfigUI(root)
+#     root.mainloop()
 if __name__ == '__main__':
     # client_dict = Client_dict()
     # other_client_dict = Client_dict()
