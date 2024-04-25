@@ -139,6 +139,7 @@ class tracking_server:
     def start_server(self):
         while True:
             try:
+                print(self.get_local_ip())
                 clientSocket, clientAddress = self.server_socket.accept()
                 clientCommand = threading.Thread(target=self.handle_clients(clientSocket, clientAddress))
                 clientCommand.start()

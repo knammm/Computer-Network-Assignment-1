@@ -310,9 +310,10 @@ class client:
                 if len(msg_split) == 3:
                     uniqueID = int(msg_split[2])  # Get unique ID
                     name = os.path.basename(self.upload_path)
-                    total_chunks = os.path.getsize(self.upload_path) / chunksize
+                    total_chunks = math.ceil(os.path.getsize(self.upload_path) / chunksize)
                     general_dict.add_file(uniqueID, name, total_chunks)
                     general_dict.split_chunks(uniqueID, self.upload_path, self.chunk_path)
+                    general_dict.create_JSON(uniqueID, self.download_path)
                 self.log.append(receive_message)
                 print(f"Upload successfully {uniqueID}")
 
@@ -364,6 +365,7 @@ class client:
                             print("Success")
                             self.status = 1
                             id = general_dict.add_file_from_JSON(self.json_path)
+                            general_dict.print_dict()
                             general_dict.add_chunks_from_dir(self.chunk_path, id)
                             general_dict.merge_chunks(id, self.download_path)
                             # Close connection
@@ -462,17 +464,16 @@ if __name__ == '__main__':
 
     # for path in correct_path:
     #     print(path)
-    new_client.set_client_download_path(r"D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\test\Download")
-    new_client.set_client_upload_path(r"D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\test\Upload\alice.zip")
-    new_client.chunk_path = r"D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\test\Chunk"
-    new_client.json_path = r"D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\test\Json\alice.zip.json"
-    new_client.set_server_host("192.168.111.226")
+    new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
+    new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\alice.zip")
+    new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
+    new_client.json_path = r"testing_data/alice.zip.json"
+    new_client.set_server_host("192.168.32.104")
 
     new_client.start_client()
 
     new_client.set_message("Upload")
     time.sleep(3)
-    new_client.set_message("Download 0")
 
     # while 1:
     #     new_client.set_message("Download 0")
