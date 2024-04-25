@@ -72,9 +72,8 @@ class tracking_server:
             frag_message = recv_message.split(" ")
             client_cmd = frag_message[0]
 
-            print(f"Receive: {recv_message}")
-
             if client_cmd == 'Download':
+                print(f"Receive: {client_cmd}")
                 # Client sent 'Download'
                 magnet_text = int(frag_message[1])
                 if magnet_text in self.file_client:

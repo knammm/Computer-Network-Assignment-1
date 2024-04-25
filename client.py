@@ -248,6 +248,7 @@ class client:
     def send_chunk_to_client(self, clientConnect, clientSocket):
         print(f'Prepare to serve {clientSocket}...')
         receive_message = clientConnect.recv(BYTES).decode("utf-8")
+        print(receive_message)
         uniqueID = receive_message.split("--")[0]
         start = receive_message.split("--")[1]
         chunk_files = os.listdir(self.chunk_path)
@@ -257,6 +258,7 @@ class client:
         # Always make the file order ascendingly
         sorted_file_names = sorted(correct_chunk_files, key=lambda x: int(x.split('_')[1].split(".")[0]))
         for file in sorted_file_names:
+            print(f"sending file:{file}")
             correct_path.append(self.chunk_path + "\\" + file)
 
         # print(correct_path)
@@ -302,9 +304,9 @@ class client:
             receive_message = self.client_socket.recv(BYTES).decode("utf-8")
             msg_split = receive_message.split("--")
             cmd = msg_split[1]
-            print(receive_message)
             if "Welcome" in cmd:
                 self.client_socket.send(f'{LOCAL_PORT}'.encode("utf-8"))
+                print("welcome")
 
             elif "Upload Successfully" in cmd:
                 if len(msg_split) == 3:
@@ -359,7 +361,9 @@ class client:
                             file.close()
                             chunkIdx += 1
 
-                        total = 13  # Change to total chunk
+                        with open(self.json_path, 'r') as json_file:
+                            file_info = json.load(json_file)
+                            total = int(file_info.get("total"))
                         # Handle enough chunk => break
                         if (chunkIdx - 1) == total:
                             print("Success")
@@ -404,8 +408,6 @@ class client:
 
             client_cmd = self.get_message()
 
-            print(client_cmd)
-
             if client_cmd == " ":
                 client_cmd = "Waiting"
 
@@ -436,13 +438,23 @@ class client:
         self.log.append("[Anncounment] Disconnect from the server !")
         self.client_socket.close()
 
+
+    def stop_connect_to_server(self):
+        self.client_socket.close()
+
     def start_client(self):
-        t1 = threading.Thread(target=self.handle_server)
-        t1.start()
         t2 = threading.Thread(target=self.open_file_serving_socket)
         t2.start()
         return
+    
+    def sending_messsage_to_server(self, message):
+        t1 = threading.Thread(target=self.handle_server)
+        t1.start()
+        self.set_message(message)
+        t1.join()
+        self.stop_connect_to_server()
 
+    
 
 new_client = client()
 
@@ -471,15 +483,13 @@ if __name__ == '__main__':
     new_client.set_server_host("192.168.32.104")
 
     new_client.start_client()
-
-    new_client.set_message("Upload")
-    time.sleep(3)
-
+    # time.sleep(3)
+    # new_client.set_message("Download 0")
     # while 1:
-    #     new_client.set_message("Download 0")
+    #     
     #     # print(new_client.get_message())
     #     time.sleep(3)
-
+    new_client.sending_messsage_to_server("Upload")
     print("Done")
     # size = 20
     # ID = uniqueID
