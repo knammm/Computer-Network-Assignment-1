@@ -459,9 +459,173 @@ class client:
         t1.join()
         self.stop_connect_to_server()
 
-    
-
 new_client = client()
+
+class ClientConfigUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Client Configuration")
+
+        # Server IP
+        self.server_ip_label = tk.Label(root, text="Server IP:")
+        self.server_ip_label.grid(row=0, column=0, sticky="e")
+        self.server_ip_entry = tk.Entry(root)
+        self.server_ip_entry.grid(row=0, column=1)
+
+        # Server Port
+        self.server_port_label = tk.Label(root, text="Server Port:")
+        self.server_port_label.grid(row=1, column=0, sticky="e")
+        self.server_port_entry = tk.Entry(root, state='readonly')
+        self.server_port_entry.grid(row=1, column=1)
+        self.custom_port_var = tk.BooleanVar()
+        self.custom_port_checkbox = tk.Checkbutton(root, text="Custom", variable=self.custom_port_var, command=self.toggle_custom_port)
+        self.custom_port_checkbox.grid(row=1, column=2)
+
+        # Directory Path
+        self.dir_path_label = tk.Label(root, text="Directory Path:")
+        self.dir_path_label.grid(row=2, column=0, sticky="e")
+        self.dir_path_entry = tk.Entry(root)
+        self.dir_path_entry.grid(row=2, column=1)
+        self.dir_path_button = tk.Button(root, text="Browse", command=self.browse_dir_path)
+        self.dir_path_button.grid(row=2, column=2)
+
+        # File Path
+        self.file_path_label = tk.Label(root, text="File Path:")
+        self.file_path_label.grid(row=3, column=0, sticky="e")
+        self.file_path_entry = tk.Entry(root)
+        self.file_path_entry.grid(row=3, column=1)
+        self.file_path_button = tk.Button(root, text="Browse", command=self.browse_file_path)
+        self.file_path_button.grid(row=3, column=2)
+
+        # Submit Button
+        self.submit_button = tk.Button(root, text="Submit", command=self.submit)
+        self.submit_button.grid(row=4, columnspan=2)
+
+        # Hidden Port Entry
+        self.port_entry = tk.Entry(root)
+        self.port_entry.grid(row=1, column=1)
+        self.port_entry.grid_remove()
+
+    def browse_dir_path(self):
+        dir_path = filedialog.askdirectory()
+        self.dir_path_entry.delete(0, tk.END)
+        self.dir_path_entry.insert(0, dir_path)
+
+    def browse_file_path(self):
+        file_path = filedialog.askdirectory()
+        self.file_path_entry.delete(0, tk.END)
+        self.file_path_entry.insert(0, file_path)
+
+    def toggle_custom_port(self):
+        if self.custom_port_var.get():
+            self.server_port_entry.config(state='normal')
+            self.server_port_entry.delete(0, tk.END)
+        else:
+            self.server_port_entry.config(state='readonly')
+            self.server_port_entry.delete(0, tk.END)
+            self.port_entry.delete(0, tk.END)
+
+    def submit(self):
+        # Extract server IP, port, directory path, and file path
+        server_ip = self.server_ip_entry.get()
+        server_port = self.server_port_entry.get() if self.custom_port_var.get() else ""
+        dir_path = self.dir_path_entry.get()
+        file_path = self.file_path_entry.get()
+
+        # Validation
+        if not server_ip:
+            messagebox.showerror("Error", "Please enter the Server IP.")
+            return
+
+        if not dir_path:
+            messagebox.showerror("Error", "Please select a Directory Path.")
+            return
+
+        if not os.path.exists(dir_path):
+            messagebox.showerror("Error", "Directory Path does not exist.")
+            return
+
+        if not file_path:
+            messagebox.showerror("Error", "Please select a File Path.")
+            return
+
+        if self.custom_port_var.get():
+            try:
+                server_port = int(server_port)  # Get server port from user input
+            except ValueError:
+                messagebox.showerror("Error", "Please enter a valid Server Port.")
+                return
+
+        # Create an instance of the client
+        try:
+            client_instance = client()
+
+            # Set server IP and port
+            # Set server IP and port
+            client_instance.set_server_host(server_ip)
+            client_instance.set_server_port(server_port)  # Set custom port if provided
+
+            # Set client upload and download paths
+            client_instance.set_client_upload_path(dir_path)
+            client_instance.set_client_download_path(dir_path)  # Assume same path for download
+
+            # Ensure that the chunk_path attribute is properly set
+            client_instance.chunk_path = dir_path  # Set the chunk path
+
+            # Start file serving socket in a separate thread
+            file_serving_thread = threading.Thread(target=client_instance.open_file_serving_socket)
+            file_serving_thread.daemon = True
+            file_serving_thread.start()
+
+            # Start server communication in a separate thread
+            server_communication_thread = threading.Thread(target=client_instance.handle_server)
+            server_communication_thread.daemon = True
+            server_communication_thread.start()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to start client: {e}")
+            return
+
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     app = ClientConfigUI(root)
+#     root.mainloop()
+
+if __name__ == '__main__':
+    # client_dict = Client_dict()
+    # other_client_dict = Client_dict()
+    # other_client_dict.add_file(0, "file0.txt", 5)
+    # client_dict.add_file(1, "file1.zip", 3)
+    # client_dict.add_file(3, "file3.png", 5)
+    #
+    # # print(client_dict.dict.values())
+    # chunk_test = Chunk("test.txt", 10)
+    # chunk_test.add_chunk(1, "abcd")
+    # # chunk_test.print_chunks()
+    # other_client_dict.add_chunk(0, "file0-data2", 2)
+    # other_client_dict.add_chunk(0, "file0-data1", 1)
+    #
+    # client_dict.add_chunk(1, "file1-data4", 0)
+    # client_dict.add_chunk(1, "file1-data5", 1)
+    # client_dict.add_chunk(1, "file1-data2", 2)
+    #
+    # client_dict.add_chunk(3, "file3-data6", 6)
+    # client_dict.print_dict()
+    # client_dict.merge(other_client_dict)
+    # client_dict.print_dict()
+    # print(f"full:{client_dict.is_complete(1)}")
+    # print(f"Missing file:{client_dict.missing_file(1)}")
+    # zip_file_path = r'D:\Computer Network\BTL\testing_data\alice.zip'
+    # zip_output_path = r'D:\Computer Network\BTL\testing_data\alice_out.zip'
+    # output_folder = r'D:\Computer Network\BTL\testing_data\output_chunks'
+    # output_json_folder = r'D:\Computer Network\BTL\testing_data'
+    # client_dict.add_undefine_chunk(r'D:\Computer Network\BTL\testing_data\clone_chunks.txt')
+    # client_dict.print_dict()
+    # client_dict.split_chunks(5, zip_file_path, output_folder)
+    # JSONpath = client_dict.create_JSON(5, output_json_folder)
+    # client_dict.add_file_from_JSON(JSONpath)
+    # client_dict.print_dict()
+    # client_dict.merge_chunks(5, zip_output_path)
+    
 
 if __name__ == '__main__':
     uniqueID = "5"
