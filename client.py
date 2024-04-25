@@ -73,7 +73,8 @@ class Chunk:
         return partnum
 
     def merge_chunks(self, tofile):
-        output = open(tofile, 'wb')
+        path = f"{tofile}\{self.name}"
+        output = open(path, 'wb')
         for order in range(self.total):
             filepath = self.chunks_dict[order + 1]
             with open(filepath, 'rb') as fileobj:
@@ -139,7 +140,9 @@ class Client_dict:
 
     def add_chunks_from_dir(self, dir, id):
         all_files = os.listdir(dir)
+        print(all_files)
         chunk_files = [file for file in all_files if file.startswith(f'{id}_')]
+        print(chunk_files)
         for filename in chunk_files:
             filepath = f"{dir}\{filename}"
             with open(filepath, 'rb') as fileobj:
@@ -161,6 +164,7 @@ class Client_dict:
     def add_file_from_JSON(self, JSONpath):
         with open(JSONpath, 'r') as json_file:
             file_info = json.load(json_file)
+            print(file_info)
             self.add_file(int(file_info.get("id")), file_info.get("name"), int(file_info.get("total")))
             return int(file_info.get("id"))
 
@@ -318,6 +322,7 @@ class client:
                     general_dict.create_JSON(uniqueID, self.download_path)
                 self.log.append(receive_message)
                 print(f"Upload successfully {uniqueID}")
+                break
 
             elif "Download Successfully" in cmd:
                 print(f"Receive: {receive_message}")
@@ -345,7 +350,7 @@ class client:
                         size = new_socket.recv(BYTES).decode("utf-8")
 
                         for i in range(0, int(size)):
-                            path = self.download_path + "\\" + f"{self.id}_{chunkIdx}.txt"
+                            path = self.chunk_path + "\\" + f"{self.id}_{chunkIdx}.txt"
                             text = new_socket.recv(2 * chunksize)
                             try:
                                 with open(path, 'wb') as file:
@@ -369,7 +374,6 @@ class client:
                             print("Success")
                             self.status = 1
                             id = general_dict.add_file_from_JSON(self.json_path)
-                            general_dict.print_dict()
                             general_dict.add_chunks_from_dir(self.chunk_path, id)
                             general_dict.merge_chunks(id, self.download_path)
                             # Close connection
@@ -391,6 +395,7 @@ class client:
                                 break
 
                     print("Finished")
+                break
 
                 self.log.append(receive_message)
 
@@ -484,12 +489,11 @@ if __name__ == '__main__':
 
     new_client.start_client()
     # time.sleep(3)
-    # new_client.set_message("Download 0")
-    # while 1:
-    #     
-    #     # print(new_client.get_message())
-    #     time.sleep(3)
-    new_client.sending_messsage_to_server("Upload")
+    # # while 1:
+    # #     
+    # #     # print(new_client.get_message())
+    # #     time.sleep(3)
+    new_client.sending_messsage_to_server("Download 1")
     print("Done")
     # size = 20
     # ID = uniqueID
