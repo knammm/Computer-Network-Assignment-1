@@ -141,7 +141,6 @@ class Client_dict:
         all_files = os.listdir(dir)
         print(all_files)
         chunk_files = [file for file in all_files if file.startswith(f'{id}_')]
-        print(chunk_files)
         for filename in chunk_files:
             filepath = f"{dir}\{filename}"
             # with open(filepath, 'rb') as fileobj:
@@ -151,7 +150,6 @@ class Client_dict:
             if match:
                 extracted_number = int(match.group(1))
                 self.add_chunk(id, filepath, extracted_number)
-                print(f"number: {extracted_number}")
             else:
                 print("Fail")
 
@@ -169,7 +167,6 @@ class Client_dict:
     def add_file_from_JSON(self, JSONpath):
         with open(JSONpath, 'r') as json_file:
             file_info = json.load(json_file)
-            print(file_info)
             self.add_file(int(file_info.get("id")), file_info.get("name"), int(file_info.get("total")))
             return int(file_info.get("id"))
 
@@ -600,86 +597,19 @@ new_client = client()
 #             messagebox.showerror("Error", f"Failed to start client: {e}")
 #             return
 
-
-# if __name__ == "__main__":
-#     root = tk.Tk()
-#     app = ClientConfigUI(root)
-#     root.mainloop()
-
-# if __name__ == '__main__':
-# # client_dict = Client_dict()
-# # other_client_dict = Client_dict()
-# # other_client_dict.add_file(0, "file0.txt", 5)
-# # client_dict.add_file(1, "file1.zip", 3)
-# # client_dict.add_file(3, "file3.png", 5)
-# #
-# # # print(client_dict.dict.values())
-# # chunk_test = Chunk("test.txt", 10)
-# # chunk_test.add_chunk(1, "abcd")
-# # # chunk_test.print_chunks()
-# # other_client_dict.add_chunk(0, "file0-data2", 2)
-# # other_client_dict.add_chunk(0, "file0-data1", 1)
-# #
-# # client_dict.add_chunk(1, "file1-data4", 0)
-# # client_dict.add_chunk(1, "file1-data5", 1)
-# # client_dict.add_chunk(1, "file1-data2", 2)
-# #
-# # client_dict.add_chunk(3, "file3-data6", 6)
-# # client_dict.print_dict()
-# # client_dict.merge(other_client_dict)
-# # client_dict.print_dict()
-# # print(f"full:{client_dict.is_complete(1)}")
-# # print(f"Missing file:{client_dict.missing_file(1)}")
-# # zip_file_path = r'D:\Computer Network\BTL\testing_data\alice.zip'
-# # zip_output_path = r'D:\Computer Network\BTL\testing_data\alice_out.zip'
-# # output_folder = r'D:\Computer Network\BTL\testing_data\output_chunks'
-# # output_json_folder = r'D:\Computer Network\BTL\testing_data'
-# # client_dict.add_undefine_chunk(r'D:\Computer Network\BTL\testing_data\clone_chunks.txt')
-# # client_dict.print_dict()
-# # client_dict.split_chunks(5, zip_file_path, output_folder)
-# # JSONpath = client_dict.create_JSON(5, output_json_folder)
-# # client_dict.add_file_from_JSON(JSONpath)
-# # client_dict.print_dict()
-# # client_dict.merge_chunks(5, zip_output_path)
-
-
 if __name__ == '__main__':
-    uniqueID = "5"
-    # send_data = data
-    # clientConnect.send(f"{send_data}".encode("utf-8"))
-    # dir = r'D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\git\testing_data\output_chunks'
-    # chunk_files = os.listdir(dir)
-    # print(chunk_files)
-    # correct_chunk_files = [file for file in chunk_files if file.startswith(f'{uniqueID}')]
-    # print(correct_chunk_files)
-    # correct_path = []
-    # sorted_file_names = sorted(correct_chunk_files, key=lambda x: int(x.split('_')[1].split(".")[0]))
-    # for file in sorted_file_names:
-    #     correct_path.append(dir + '\\' + file)
-
-    # print(len(correct_path))
-
-    # for path in correct_path:
-    #     print(path)
     new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
     new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf")
     new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
     new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
     new_client.set_server_host("192.168.0.106")
-
-    # general_dict.add_file_from_JSON(new_client.json_path)
-    # general_dict.add_chunks_from_dir(new_client.chunk_path, 0)
-    # print(general_dict.dict)
-    # general_dict.merge_chunks(0, new_client.download_path)
     with open(new_client.json_path, 'r') as json_file:
             file_info = json.load(json_file)
             print(file_info)
             id = int(file_info.get("id"))
             print(id)
     new_client.start_client()
-    #new_client.sending_messsage_to_server("Upload")
-    new_client.sending_messsage_to_server(f"Download 1")
-    general_dict.print_dict()
+    new_client.sending_messsage_to_server(f"Download {id}")
     print("Done")
 
     # # time.sleep(3)
