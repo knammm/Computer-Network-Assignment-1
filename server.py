@@ -20,7 +20,7 @@ class tracking_server:
         # Init socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))  # Tuple of (IP, Port)
-        self.server_socket.settimeout(5)
+        # self.server_socket.settimeout(5)
         self.server_socket.listen()
         self.log.append(f'[System Anouncement] Server is running !')
 
@@ -71,12 +71,13 @@ class tracking_server:
 
         while True:
             recv_message = connection.recv(BYTES).decode("utf-8")
-
-            frag_message = recv_message.split(" ")
-            client_cmd = frag_message[0]
-
-            print(f"Receive: {recv_message}")
-
+            if recv_message != "":
+                frag_message = recv_message.split(" ")
+                client_cmd = frag_message[0]
+                print(f"Receive: {recv_message}")
+            else:
+                frag_message = ""
+                client_cmd = ""
             if client_cmd == 'Download':
                 # Client sent 'Download'
                 magnet_text = int(frag_message[1])
@@ -141,7 +142,6 @@ class tracking_server:
 
     def start_server(self):
         while True:
-            print(self.log)
             try:
                 clientSocket, clientAddress = self.server_socket.accept()
                 clientCommand = threading.Thread(target=self.handle_clients(clientSocket, clientAddress))
