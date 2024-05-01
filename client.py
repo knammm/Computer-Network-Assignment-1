@@ -64,9 +64,7 @@ class Chunk:
             if not chunk: break
             partnum = partnum + 1
             filename = os.path.join(todir, (f'{id}_{partnum}.txt'))
-            header = f"{id} {partnum}\n".encode()
             fileobj = open(filename, 'wb')
-            fileobj.write(header)
             fileobj.write(chunk)
             self.add_chunk(partnum, filename)
             fileobj.close()  # or simply open(  ).write(  )
@@ -290,6 +288,7 @@ class client:
                 print(f"Continue--{i}")
             else:
                 print(f"Fail--{i}")
+                i-=1
                 break
 
     def open_file_serving_socket(self):
@@ -347,7 +346,8 @@ class client:
                     chunkIdx = 1
                     while True:
                         # Random choose a client to connect
-                        rand_int = random.randint(0, len(peer_info['ip']) - 1)
+                        # rand_int = random.randint(0, len(peer_info['ip']) - 1)
+                        rand_int = len(peer_info['ip'])-1
                         miniServerIP = peer_info['ip'][rand_int]
                         miniServerPort = peer_info['port'][rand_int]
                         connect_tuple = (miniServerIP, miniServerPort)  # connect client
@@ -359,7 +359,7 @@ class client:
 
                         new_socket.send(f"{self.id}--{chunkIdx}".encode("utf-8"))  # Send uniqueID--chunkStart
                         size = new_socket.recv(BYTES).decode("utf-8")
-
+                        print(f"chunk id:{chunkIdx}")
                         for i in range(chunkIdx - 1, int(size)):
                             path = self.chunk_path + "\\" + f"{self.id}_{chunkIdx}.txt"
                             text = new_socket.recv(2 * chunksize)
@@ -416,17 +416,19 @@ class client:
                 break
 
             elif "Waiting" in cmd:
-                pass
+                break
 
             else:
                 self.log.append(receive_message)
+                print("Something went wrong")
+                break
 
             time.sleep(0.1)
 
             client_cmd = self.get_message()
 
             if client_cmd == " ":
-                client_cmd = "Waiting"
+                pass
 
             cmd_split = client_cmd.split(" ")
             cmd = cmd_split[0]
@@ -448,8 +450,7 @@ class client:
                 self.set_message(" ")
 
             else:
-                cmd = "Wrong"
-                self.client_socket.send(cmd.encode("utf-8"))
+                print("Something's wrong")
                 self.set_message(" ")
 
         self.log.append("[Anncounment] Disconnect from the server !")
@@ -660,19 +661,25 @@ if __name__ == '__main__':
 
     # for path in correct_path:
     #     print(path)
-    new_client.set_client_download_path(r"D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\test\Download")
-    new_client.set_client_upload_path(r"D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\test\Upload\Multidisciplinary_Project-2.pdf")
-    new_client.chunk_path = r"D:\BKU - K21 - Computer Engineering\Computer Network\Assignment\Assignment 1\test\Chunk"
-    new_client.json_path = r"C:\Users\84909\Downloads\FreeRTOSv202212.01.zip.json"
-    new_client.set_server_host("10.128.130.89")
+    new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
+    new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf")
+    new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
+    new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
+    new_client.set_server_host("192.168.0.106")
 
     # general_dict.add_file_from_JSON(new_client.json_path)
     # general_dict.add_chunks_from_dir(new_client.chunk_path, 0)
     # print(general_dict.dict)
     # general_dict.merge_chunks(0, new_client.download_path)
-
+    with open(new_client.json_path, 'r') as json_file:
+            file_info = json.load(json_file)
+            print(file_info)
+            id = int(file_info.get("id"))
+            print(id)
     new_client.start_client()
-    new_client.sending_messsage_to_server("Download 0")
+    #new_client.sending_messsage_to_server("Upload")
+    new_client.sending_messsage_to_server(f"Download 1")
+    general_dict.print_dict()
     print("Done")
 
     # # time.sleep(3)
