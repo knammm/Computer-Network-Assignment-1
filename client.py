@@ -7,7 +7,7 @@ import time
 import threading
 from tkinter import filedialog, messagebox, ttk
 import tkinter as tk
-import re
+import re, sys
 
 kilobytes = 1024
 chunksize = kilobytes * 100
@@ -155,12 +155,18 @@ class Client_dict:
             else:
                 print("Fail")
 
-    def create_JSON(self, id, dirpath):
+    def create_JSON(self, id, dirpath, chunkspath):
         file_info = {}
         if id in self.dict:
             file_info['id'] = id
             file_info['name'] = self.dict[id].name
             file_info['total'] = self.dict[id].total
+            for order in range(0, self.dict[id].total):
+                filepath = f"{chunkspath}\{id}_{order+1}.txt"
+                # with open(filepath, 'rb') as fileobj:
+                #     content = fileobj.readline()
+                #     values = content.split()
+                file_info[order] = os.path.getsize(filepath)
         json_file_path = f'{dirpath}\{self.dict[id].name}.json'
         with open(json_file_path, 'w') as json_file:
             json.dump(file_info, json_file, indent=4)
@@ -286,9 +292,10 @@ class client:
             if status_file == "OK":
                 print(f"Continue--{i}")
             else:
-                print(f"Fail--{i}")
-                i-=1
-                break
+                frag_message = status_file.split("--")
+                if frag_message[0] == "Fail":
+                    i = int(frag_message[1])
+                    print(f"Fail--{i}")
 
     def open_file_serving_socket(self):
         self.file_soket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -328,7 +335,7 @@ class client:
                     total_chunks = math.ceil(os.path.getsize(self.upload_path) / chunksize)
                     general_dict.add_file(uniqueID, name, total_chunks)
                     general_dict.split_chunks(uniqueID, self.upload_path, self.chunk_path)
-                    general_dict.create_JSON(uniqueID, self.download_path)
+                    general_dict.create_JSON(uniqueID, self.download_path, self.chunk_path)
                 self.log.append(receive_message)
                 print(f"Upload successfully {uniqueID}")
                 break
@@ -362,6 +369,13 @@ class client:
                         for i in range(chunkIdx - 1, int(size)):
                             path = self.chunk_path + "\\" + f"{self.id}_{chunkIdx}.txt"
                             text = new_socket.recv(2 * chunksize)
+                            with open(new_client.json_path, 'r') as json_file:
+                                file_info = json.load(json_file)
+                                print(file_info)
+                                size = int(file_info.get(chunkIdx))
+                            if (sys.getsizeof(text) != int(size)):
+                                print(f"sys size: {sys.getsizeof(text)}, ex size: {int(size)}")
+                                new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
                             try:
                                 with open(path, 'wb') as file:
                                     file.write(text)
@@ -370,9 +384,8 @@ class client:
                                 # time.sleep(0.1)
                             except IOError as e:
                                 print(f"Error: {chunkIdx}")
-                                new_socket.send(f"Fail".encode("utf-8"))
+                                new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
                                 chunkIdx -= 1
-                                break
 
                             file.close()
                             chunkIdx += 1
@@ -472,7 +485,7 @@ class client:
         self.stop_connect_to_server()
 
 
-# new_client = client()
+new_client = client()
 class ClientApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -619,18 +632,18 @@ class ClientApp(tk.Tk):
 
 if __name__ == '__main__':
     # new_client.start_client()
-    app = ClientApp()
-    app.mainloop()
-    # new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
-    # new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf")
-    # new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
-    # new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
-    # new_client.set_server_host("10.128.130.89")
-    # with open(new_client.json_path, 'r') as json_file:
-    #         file_info = json.load(json_file)
-    #         print(file_info)
-    #         id = int(file_info.get("id"))
-    #         print(id)
-    # new_client.start_client()
-    # new_client.sending_messsage_to_server(f"Upload")
+    # app = ClientApp()
+    # app.mainloop()
+    new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
+    new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\Multidisciplinary_Project-2.pdf")
+    new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
+    new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
+    new_client.set_server_host("10.130.232.145")
+    with open(new_client.json_path, 'r') as json_file:
+            file_info = json.load(json_file)
+            print(file_info)
+            id = int(file_info.get("id"))
+            print(id)
+    new_client.start_client()
+    new_client.sending_messsage_to_server(f"Upload")
     # print("Done")
