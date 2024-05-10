@@ -5,6 +5,8 @@ import math
 import random
 import time
 import threading
+from tkinter import filedialog, messagebox, ttk
+import tkinter as tk
 import re
 
 kilobytes = 1024
@@ -383,6 +385,7 @@ class client:
                             print("Success")
                             self.status = 1
                             id = general_dict.add_file_from_JSON(self.json_path)
+                            print(f"chunk path 2: {self.chunk_path}")
                             general_dict.add_chunks_from_dir(self.chunk_path, id)
                             general_dict.merge_chunks(id, self.download_path)
                             # Close connection
@@ -469,164 +472,165 @@ class client:
         self.stop_connect_to_server()
 
 
-new_client = client()
-#
-#
-# class ClientConfigUI:
-#     def __init__(self, root):
-#         self.root = root
-#         self.root.title("Client Configuration")
-#
-#         # Server IP
-#         self.server_ip_label = tk.Label(root, text="Server IP:")
-#         self.server_ip_label.grid(row=0, column=0, sticky="e")
-#         self.server_ip_entry = tk.Entry(root)
-#         self.server_ip_entry.grid(row=0, column=1)
-#
-#         # Server Port
-#         self.server_port_label = tk.Label(root, text="Server Port:")
-#         self.server_port_label.grid(row=1, column=0, sticky="e")
-#         self.server_port_entry = tk.Entry(root, state='readonly')
-#         self.server_port_entry.grid(row=1, column=1)
-#         self.custom_port_var = tk.BooleanVar()
-#         self.custom_port_checkbox = tk.Checkbutton(root, text="Custom", variable=self.custom_port_var,
-#                                                    command=self.toggle_custom_port)
-#         self.custom_port_checkbox.grid(row=1, column=2)
-#
-#         # Directory Path
-#         self.dir_path_label = tk.Label(root, text="Directory Path:")
-#         self.dir_path_label.grid(row=2, column=0, sticky="e")
-#         self.dir_path_entry = tk.Entry(root)
-#         self.dir_path_entry.grid(row=2, column=1)
-#         self.dir_path_button = tk.Button(root, text="Browse", command=self.browse_dir_path)
-#         self.dir_path_button.grid(row=2, column=2)
-#
-#         # File Path
-#         self.file_path_label = tk.Label(root, text="File Path:")
-#         self.file_path_label.grid(row=3, column=0, sticky="e")
-#         self.file_path_entry = tk.Entry(root)
-#         self.file_path_entry.grid(row=3, column=1)
-#         self.file_path_button = tk.Button(root, text="Browse", command=self.browse_file_path)
-#         self.file_path_button.grid(row=3, column=2)
-#
-#         # Submit Button
-#         self.submit_button = tk.Button(root, text="Submit", command=self.submit)
-#         self.submit_button.grid(row=4, columnspan=2)
-#
-#         # Hidden Port Entry
-#         self.port_entry = tk.Entry(root)
-#         self.port_entry.grid(row=1, column=1)
-#         self.port_entry.grid_remove()
-#
-#     def browse_dir_path(self):
-#         dir_path = filedialog.askdirectory()
-#         self.dir_path_entry.delete(0, tk.END)
-#         self.dir_path_entry.insert(0, dir_path)
-#
-#     def browse_file_path(self):
-#         file_path = filedialog.askdirectory()
-#         self.file_path_entry.delete(0, tk.END)
-#         self.file_path_entry.insert(0, file_path)
-#
-#     def toggle_custom_port(self):
-#         if self.custom_port_var.get():
-#             self.server_port_entry.config(state='normal')
-#             self.server_port_entry.delete(0, tk.END)
-#         else:
-#             self.server_port_entry.config(state='readonly')
-#             self.server_port_entry.delete(0, tk.END)
-#             self.port_entry.delete(0, tk.END)
-#
-#     def submit(self):
-#         # Extract server IP, port, directory path, and file path
-#         server_ip = self.server_ip_entry.get()
-#         server_port = self.server_port_entry.get() if self.custom_port_var.get() else ""
-#         dir_path = self.dir_path_entry.get()
-#         file_path = self.file_path_entry.get()
-#
-#         # Validation
-#         if not server_ip:
-#             messagebox.showerror("Error", "Please enter the Server IP.")
-#             return
-#
-#         if not dir_path:
-#             messagebox.showerror("Error", "Please select a Directory Path.")
-#             return
-#
-#         if not os.path.exists(dir_path):
-#             messagebox.showerror("Error", "Directory Path does not exist.")
-#             return
-#
-#         if not file_path:
-#             messagebox.showerror("Error", "Please select a File Path.")
-#             return
-#
-#         if self.custom_port_var.get():
-#             try:
-#                 server_port = int(server_port)  # Get server port from user input
-#             except ValueError:
-#                 messagebox.showerror("Error", "Please enter a valid Server Port.")
-#                 return
-#
-#         # Create an instance of the client
-#         try:
-#             client_instance = client()
-#
-#             # Set server IP and port
-#             # Set server IP and port
-#             client_instance.set_server_host(server_ip)
-#             client_instance.set_server_port(server_port)  # Set custom port if provided
-#
-#             # Set client upload and download paths
-#             client_instance.set_client_upload_path(dir_path)
-#             client_instance.set_client_download_path(dir_path)  # Assume same path for download
-#
-#             # Ensure that the chunk_path attribute is properly set
-#             client_instance.chunk_path = dir_path  # Set the chunk path
-#
-#             # Start file serving socket in a separate thread
-#             file_serving_thread = threading.Thread(target=client_instance.open_file_serving_socket)
-#             file_serving_thread.daemon = True
-#             file_serving_thread.start()
-#
-#             # Start server communication in a separate thread
-#             server_communication_thread = threading.Thread(target=client_instance.handle_server)
-#             server_communication_thread.daemon = True
-#             server_communication_thread.start()
-#         except Exception as e:
-#             messagebox.showerror("Error", f"Failed to start client: {e}")
-#             return
+# new_client = client()
+class ClientApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("File Sharing Client")
+        self.geometry("600x400")
+        self.client = client()  # Make sure new_client is properly initialized and configured
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Server IP Configuration
+        ttk.Label(self, text="Server IP:").grid(row=0, column=0, sticky=tk.W, padx=10, pady=5)
+        self.server_ip_entry = ttk.Entry(self, width=25)
+        self.server_ip_entry.grid(row=0, column=1, padx=10, pady=5)
+
+        # Directory for Uploads
+        ttk.Label(self, text="Upload Directory:").grid(row=1, column=0, sticky=tk.W, padx=10, pady=5)
+        self.up_directory_entry = ttk.Entry(self, width=25)
+        self.up_directory_entry.grid(row=1, column=1, padx=10, pady=5)
+        ttk.Button(self, text="Browse...", command=self.browse_upload_folder).grid(row=1, column=2, padx=10, pady=5)
+
+        # Directory for JSON
+        ttk.Label(self, text="JSON File:").grid(row=2, column=0, sticky=tk.W, padx=10, pady=5)
+        self.json_file_entry = ttk.Entry(self, width=25)
+        self.json_file_entry.grid(row=2, column=1, padx=10, pady=5)
+        ttk.Button(self, text="Browse...", command=self.browse_json_file).grid(row=2, column=2, padx=10, pady=5)
+
+        # Directory for Downloads
+        ttk.Label(self, text="Download File:").grid(row=3, column=0, sticky=tk.W, padx=10, pady=5)
+        self.down_directory_entry = ttk.Entry(self, width=25)
+        self.down_directory_entry.grid(row=3, column=1, padx=10, pady=5)
+        ttk.Button(self, text="Browse...", command=self.browse_download_folder).grid(row=3, column=2, padx=10, pady=5)
+
+        # Chunk Directory configuration
+        ttk.Label(self, text="Chunk Directory:").grid(row=4, column=0, sticky=tk.W, padx=10, pady=5)
+        self.chunk_directory_entry = ttk.Entry(self, width=25)
+        self.chunk_directory_entry.grid(row=4, column=1, padx=10, pady=5)
+        ttk.Button(self, text="Browse...", command=self.browse_chunk_folder).grid(row=4, column=2, padx=10, pady=5)
+
+        # Connect Button
+        ttk.Button(self, text="Connect", command=self.connect_to_server).grid(row=5, columnspan=3, pady=10)
+
+        # File List (To Be Implemented)
+        self.file_list = tk.Listbox(self, height=10)
+        self.file_list.grid(row=6, column=0, columnspan=3, sticky='ew', padx=10, pady=5)
+
+        # Scrollbar for File List
+        scrollbar = ttk.Scrollbar(self, orient='vertical', command=self.file_list.yview)
+        scrollbar.grid(row=6, column=3, sticky='ns')
+        self.file_list.config(yscrollcommand=scrollbar.set)
+
+        # Upload and Download Buttons
+        ttk.Button(self, text="Upload File", command=self.upload_file).grid(row=7, column=0, padx=10, pady=5)
+        ttk.Button(self, text="Download Selected", command=self.download_file).grid(row=7, column=2, padx=10, pady=5)
+
+        ttk.Button(self, text="Refresh List", command=self.refresh_file_list).grid(row=8, column=0, padx=10, pady=5)
+        
+    def browse_json_file(self):
+        filename = filedialog.askopenfilename(initialdir="/", title="Select a JSON file",
+                                              filetypes=(("JSON files", "*.json"), ("All files", "*.*")))
+        if filename:
+            self.json_file_entry.delete(0, tk.END)
+            self.json_file_entry.insert(0, filename)
+            self.client.json_path = filename
+
+    def refresh_file_list(self):
+        self.file_list.delete(0, tk.END)  # Clear the existing list
+        # Assuming the client class has an attribute 'file_list' that stores the current files
+        for file_id, file_data in self.client.file_list.dict.items():
+            display_text = f"{file_data.name} - Chunks: {file_data.total}"
+            self.file_list.insert(tk.END, display_text)
+
+    def browse_upload_folder(self):
+        filename = filedialog.askopenfilename()
+        if filename:
+            self.up_directory_entry.delete(0, tk.END)
+            self.up_directory_entry.insert(0, filename)
+            self.client.set_client_upload_path(filename)
+            
+
+    def browse_download_folder(self):
+        directory = filedialog.askdirectory()
+        if directory:
+            self.down_directory_entry.delete(0, tk.END)
+            self.down_directory_entry.insert(0, directory)
+            self.client.set_client_download_path(directory)
+
+    def browse_chunk_folder(self):
+        directory = filedialog.askdirectory()
+        if directory:
+            self.chunk_directory_entry.delete(0, tk.END)
+            self.chunk_directory_entry.insert(0, directory)
+            self.client.chunk_path = directory
+            print(f"chunk path 1: {self.client.chunk_path}")
+
+    def connect_to_server(self):
+        server_ip = self.server_ip_entry.get()
+        self.client.set_server_host(server_ip)
+        print(f"serverip: {server_ip}")
+        self.client.start_client()
+        # self.client.server_host = server_ip  # Set the server host in the client
+        # self.client.server_port = 18520  # Optionally set this if it might change
+        # Start handling server communication in a new thread
+        # server_thread = threading.Thread(target=self.client.handle_server)
+        # server_thread.start()
+        print("Connection to server initiated.")
+
+    def upload_file(self):
+        filename = self.up_directory_entry.get()
+        # filename = filedialog.askopenfilename(initialdir=upload_path, title="Select file",
+        #                                       filetypes=(("all files", "*.*"), ("pdf files", "*.pdf")))
+        if filename:
+            try:
+                # self.client.upload_path = filename
+                # Properly create a thread to handle server communication
+                # upload_thread = threading.Thread(target=self.client.handle_server)
+                # upload_thread.start()
+                # print(self.upload_dir_entry.get())
+                self.client.sending_messsage_to_server("Upload")
+                print(f"Prepared {filename} for upload.")
+
+            except Exception as e:
+                print(f"Failed to prepare the file for upload: {e}")
+                messagebox.showerror("Upload Failed", f"Could not prepare the file for upload: {e}")
+
+    def download_file(self):
+        try:
+            # self.client.upload_path = filename
+            # Properly create a thread to handle server communication
+            # upload_thread = threading.Thread(target=self.client.handle_server)
+            # upload_thread.start()
+            # print(self.upload_dir_entry.get())
+            self.client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
+            with open(self.client.json_path, 'r') as json_file:
+                file_info = json.load(json_file)
+                id = int(file_info.get("id"))
+            self.client.sending_messsage_to_server(f"Download {id}")
+            print("Downloading file...")
+
+        except Exception as e:
+            print(f"Failed to prepare the file for upload: {e}")
+            messagebox.showerror("Upload Failed", f"Could not prepare the file for upload: {e}")
+
 
 if __name__ == '__main__':
-    new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
-    new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf")
-    new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
-    new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
-    new_client.set_server_host("192.168.0.106")
-    with open(new_client.json_path, 'r') as json_file:
-            file_info = json.load(json_file)
-            print(file_info)
-            id = int(file_info.get("id"))
-            print(id)
-    new_client.start_client()
-    new_client.sending_messsage_to_server(f"Download {id}")
-    print("Done")
-
-    # # time.sleep(3)
-    # # # while 1:
-    # # #
-    # # #     # print(new_client.get_message())
-    # # #     time.sleep(3)
-    # new_client.sending_messsage_to_server("Download 0")
+    # new_client.start_client()
+    app = ClientApp()
+    app.mainloop()
+    # new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
+    # new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf")
+    # new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
+    # new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
+    # new_client.set_server_host("10.128.130.89")
+    # with open(new_client.json_path, 'r') as json_file:
+    #         file_info = json.load(json_file)
+    #         print(file_info)
+    #         id = int(file_info.get("id"))
+    #         print(id)
+    # new_client.start_client()
+    # new_client.sending_messsage_to_server(f"Upload")
     # print("Done")
-    # size = 20
-    # ID = uniqueID
-    # for i in range(1, int(size) + 1):
-    #     path = dir + "\\" + f"{ID}_{i}.txt"
-    #     text = "ABC"
-    #     try:
-    #         with open(path, 'w') as file:
-    #             file.write(text)
-    #         print(f"Text file '{path}' created successfully.")
-    #     except IOError as e:
-    #         print(f"Error: {e}")
