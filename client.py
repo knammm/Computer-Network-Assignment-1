@@ -267,6 +267,8 @@ class client:
         start = receive_message.split("--")[1]
         chunk_files = os.listdir(self.chunk_path)
         correct_chunk_files = [file for file in chunk_files if file.startswith(f'{uniqueID}_')]
+        clientConnect.send(f"{len(correct_chunk_files)}".encode("utf-8"))  # send file count
+        time.sleep(0.1)
         correct_path = []
         # Always make the file order ascendingly
         sorted_file_names = sorted(correct_chunk_files, key=lambda x: int(x.split('_')[1].split(".")[0]))
@@ -284,7 +286,7 @@ class client:
                     text = b''
                     text = f.read(chunksize)
                 clientConnect.sendall(text)
-                time.sleep(0.1)
+                time.sleep(0.3)
 
             status_file = clientConnect.recv(BYTES).decode("utf-8")
 
@@ -363,35 +365,34 @@ class client:
                         new_socket.connect(connect_tuple)
 
                         new_socket.send(f"{self.id}--{chunkIdx}".encode("utf-8"))  # Send uniqueID--chunkStart
+                        size = new_socket.recv(BYTES).decode("utf-8")
                         print(f"chunk id:{chunkIdx}")
-                        for i in range(chunkIdx - 1, int(73)):
+                        for i in range(chunkIdx - 1, int(size)):
                             path = self.chunk_path + "\\" + f"{self.id}_{chunkIdx}.txt"
                             text = new_socket.recv(2 * chunksize)
                             print(f"self{self.json_path}")
                             with open(self.json_path, 'r') as json_file:
                                 file_info = json.load(json_file)
-                                print(file_info)
                                 id = int(file_info.get("id"))
                                 print(f"{chunkIdx}size: {file_info.get(f"{chunkIdx}")}")
-                                sizeofchunk = int(file_info.get(f"{chunkIdx}"))
+                                # if(chunkIdx >= size)
+                                # sizeofchunk = int(file_info.get(f"{chunkIdx}"))
                                 
                             try:
-                                if (sys.getsizeof(text) == int(sizeofchunk)):
+                                # if (sys.getsizeof(text) >= int(sizeofchunk)):
                                     with open(path, 'wb') as file:
                                         file.write(text)
                                     print(f"Text file '{path}' created successfully.")
                                     new_socket.send(f"OK".encode("utf-8"))
                                     # time.sleep(0.1)
                                     file.close()
-                                else:
-                                    print(f"sys size: {sys.getsizeof(text)}, ex size: {int(sizeofchunk)}")
-                                    new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
-                                    chunkIdx -=1
+                                # else:
+                                #     print(f"sys size: {sys.getsizeof(text)}, ex size: {int(sizeofchunk)}")
+                                #     new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
 
                             except IOError as e:
                                 print(f"Error: {chunkIdx}")
                                 new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
-                                chunkIdx -= 1
 
                             
                             chunkIdx += 1
@@ -585,6 +586,7 @@ class ClientApp(tk.Tk):
             self.chunk_directory_entry.delete(0, tk.END)
             self.chunk_directory_entry.insert(0, directory)
             self.client.chunk_path = directory
+            print(directory)
             print(f"chunk path 1: {self.client.chunk_path}")
 
     def connect_to_server(self):
@@ -638,17 +640,17 @@ class ClientApp(tk.Tk):
 
 if __name__ == '__main__':
     # new_client.start_client()
-    # app = ClientApp()
-    # app.mainloop()
-    new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
-    new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\Multidisciplinary_Project-2.pdf")
-    new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\output_chunks"
-    new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
-    new_client.set_server_host("10.130.232.145")
-    with open(new_client.json_path, 'r') as json_file:
-            file_info = json.load(json_file)
-            id = int(file_info.get("id"))
-            print(id)
-    new_client.start_client()
-    new_client.sending_messsage_to_server(f"Download {id}")
+    app = ClientApp()
+    app.mainloop()
+    # new_client.set_client_download_path(r"D:\Computer Network\BTL\testing_data\ouptut")
+    # new_client.set_client_upload_path(r"D:\Computer Network\BTL\testing_data\Multidisciplinary_Project-2.pdf")
+    # new_client.chunk_path = r"D:\Computer Network\BTL\testing_data\chunks"
+    # new_client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
+    # new_client.set_server_host("192.168.112.1")
+    # with open(new_client.json_path, 'r') as json_file:
+    #         file_info = json.load(json_file)
+    #         id = int(file_info.get("id"))
+    #         print(id)
+    # new_client.start_client()
+    # new_client.sending_messsage_to_server(f"Download {id}")
     # print("Done")
