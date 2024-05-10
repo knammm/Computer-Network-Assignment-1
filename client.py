@@ -267,7 +267,6 @@ class client:
         start = receive_message.split("--")[1]
         chunk_files = os.listdir(self.chunk_path)
         correct_chunk_files = [file for file in chunk_files if file.startswith(f'{uniqueID}_')]
-        clientConnect.send(f"{len(correct_chunk_files)}".encode("utf-8"))  # send file count
         correct_path = []
         # Always make the file order ascendingly
         sorted_file_names = sorted(correct_chunk_files, key=lambda x: int(x.split('_')[1].split(".")[0]))
@@ -364,30 +363,37 @@ class client:
                         new_socket.connect(connect_tuple)
 
                         new_socket.send(f"{self.id}--{chunkIdx}".encode("utf-8"))  # Send uniqueID--chunkStart
-                        size = new_socket.recv(BYTES).decode("utf-8")
                         print(f"chunk id:{chunkIdx}")
-                        for i in range(chunkIdx - 1, int(size)):
+                        for i in range(chunkIdx - 1, int(73)):
                             path = self.chunk_path + "\\" + f"{self.id}_{chunkIdx}.txt"
                             text = new_socket.recv(2 * chunksize)
-                            with open(new_client.json_path, 'r') as json_file:
+                            print(f"self{self.json_path}")
+                            with open(self.json_path, 'r') as json_file:
                                 file_info = json.load(json_file)
                                 print(file_info)
-                                size = int(file_info.get(chunkIdx))
-                            if (sys.getsizeof(text) != int(size)):
-                                print(f"sys size: {sys.getsizeof(text)}, ex size: {int(size)}")
-                                new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
+                                id = int(file_info.get("id"))
+                                print(f"{chunkIdx}size: {file_info.get(f"{chunkIdx}")}")
+                                sizeofchunk = int(file_info.get(f"{chunkIdx}"))
+                                
                             try:
-                                with open(path, 'wb') as file:
-                                    file.write(text)
-                                print(f"Text file '{path}' created successfully.")
-                                new_socket.send(f"OK".encode("utf-8"))
-                                # time.sleep(0.1)
+                                if (sys.getsizeof(text) == int(sizeofchunk)):
+                                    with open(path, 'wb') as file:
+                                        file.write(text)
+                                    print(f"Text file '{path}' created successfully.")
+                                    new_socket.send(f"OK".encode("utf-8"))
+                                    # time.sleep(0.1)
+                                    file.close()
+                                else:
+                                    print(f"sys size: {sys.getsizeof(text)}, ex size: {int(sizeofchunk)}")
+                                    new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
+                                    chunkIdx -=1
+
                             except IOError as e:
                                 print(f"Error: {chunkIdx}")
                                 new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
                                 chunkIdx -= 1
 
-                            file.close()
+                            
                             chunkIdx += 1
 
                         with open(self.json_path, 'r') as json_file:
@@ -641,9 +647,8 @@ if __name__ == '__main__':
     new_client.set_server_host("10.130.232.145")
     with open(new_client.json_path, 'r') as json_file:
             file_info = json.load(json_file)
-            print(file_info)
             id = int(file_info.get("id"))
             print(id)
     new_client.start_client()
-    new_client.sending_messsage_to_server(f"Upload")
+    new_client.sending_messsage_to_server(f"Download {id}")
     # print("Done")
