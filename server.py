@@ -16,14 +16,14 @@ class tracking_server:
 
         # Init log
         self.log = []  # List of string
-        self.log.append(f'[System Anouncement] Host is running at {self.host}, port {self.port}')
+        self.log.append(f'[System Announcement] Host is running at {self.host}, port {self.port}')
 
         # Init socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))  # Tuple of (IP, Port)
         # self.server_socket.settimeout(5)
         self.server_socket.listen()
-        self.log.append(f'[System Anouncement] Server is running !')
+        self.log.append(f'[System Announcement] Server is running !')
 
         # Init other properties
         self.client_servers = {}  # Key: peerIP - Value: port
@@ -57,8 +57,8 @@ class tracking_server:
         return fileList
 
     def handle_clients(self, connection, address):
-        print(f'[System Anouncement] Accept new connection from {address[0]} !')
-        self.log.append(f'[System Anouncement] Accept new connection from {address[0]} !')
+        print(f'[System Announcement] Accept new connection from {address[0]} !')
+        self.log.append(f'[System Announcement] Accept new connection from {address[0]} !')
         welcome_message = "[Announcement]--Welcome to P2P File Sharing application !--".encode("utf-8")
         connection.send(welcome_message)
 
@@ -96,14 +96,14 @@ class tracking_server:
                     peers_info['ip'] = clients_ip
                     peers_info['port'] = ports
 
-                    send_data = f"[Anouncement]--Download Successfully--{magnet_text}--"  # Split by --
+                    send_data = f"[Announcement]--Download Successfully--{magnet_text}--"  # Split by --
                     send_data += f"{peers_info}"
 
                     self.file_client[magnet_text].append(clientIP)  # Append new IP
                 else:
                     send_data = f"[Failure]--Download Failed--No File Found--"
 
-                self.log.append(f"[System Anouncement] {clientIP}: Download")
+                self.log.append(f"[System Announcement] {clientIP}: Download")
                 connection.send(send_data.encode("utf-8"))
 
             elif client_cmd == 'Upload':
@@ -113,7 +113,7 @@ class tracking_server:
                 self.file_client[self.counter] = []
                 self.file_client[self.counter].append(clientIP)
                 self.counter += 1
-                self.log.append(f"[System Anouncement] {clientIP}: Upload")
+                self.log.append(f"[System Announcement] {clientIP}: Upload")
                 connection.send(send_data.encode("utf-8"))
 
             elif client_cmd == 'Disconnect':
@@ -127,7 +127,7 @@ class tracking_server:
                         # Case: no client has this file
                         self.file_client.pop(file)
 
-                self.log.append(f"[System Anouncement] {clientIP}: Disconnect")
+                self.log.append(f"[System Announcement] {clientIP}: Disconnect")
                 send_data = "[Disconnect]--Success--".encode("utf-8")
                 connection.send(send_data)
                 break

@@ -202,6 +202,7 @@ general_dict = Client_dict()
 
 class client:
     def __init__(self):
+        self.is_connected = False  # Connection status flag
         self.file_list = Client_dict()
         self.client_host = self.get_local_ip()
         self.client_port = LOCAL_PORT
@@ -217,7 +218,6 @@ class client:
         self.chunk_path = ""
         self.id = -1
         self.status = 0
-
     def get_local_ip(self):
         try:
             # Create a socket object and connect to an external server
@@ -291,11 +291,14 @@ class client:
             status_file = clientConnect.recv(BYTES).decode("utf-8")
 
             if status_file == "OK":
+                self.log.append(f"Continue--{i}")
                 print(f"Continue--{i}")
+                # self.log.append("[Announcement] Disconnect from the server !")
             else:
                 frag_message = status_file.split("--")
                 if frag_message[0] == "Fail":
                     i = int(frag_message[1])
+                    self.log.append(f"Fail--{i}")
                     print(f"Fail--{i}")
 
     def open_file_serving_socket(self):
@@ -328,6 +331,7 @@ class client:
             if "Welcome" in cmd:
                 self.client_socket.send(f'{LOCAL_PORT}'.encode("utf-8"))
                 print("welcome")
+                self.log.append(receive_message)
 
             elif "Upload Successfully" in cmd:
                 if len(msg_split) == 3:
@@ -374,7 +378,7 @@ class client:
                             with open(self.json_path, 'r') as json_file:
                                 file_info = json.load(json_file)
                                 id = int(file_info.get("id"))
-                                print(f"{chunkIdx}size: {file_info.get(f"{chunkIdx}")}")
+                                #print(f"{chunkIdx}size: {file_info.get(f"{chunkIdx}")}")
                                 # if(chunkIdx >= size)
                                 # sizeofchunk = int(file_info.get(f"{chunkIdx}"))
                                 
@@ -383,6 +387,7 @@ class client:
                                     with open(path, 'wb') as file:
                                         file.write(text)
                                     print(f"Text file '{path}' created successfully.")
+                                    self.log.append(f"Text file '{path}' created successfully.")
                                     new_socket.send(f"OK".encode("utf-8"))
                                     # time.sleep(0.1)
                                     file.close()
@@ -392,6 +397,7 @@ class client:
 
                             except IOError as e:
                                 print(f"Error: {chunkIdx}")
+                                self.log.append(f"Error: {chunkIdx}")
                                 new_socket.send(f"Fail--{chunkIdx}".encode("utf-8"))
 
                             
@@ -416,6 +422,7 @@ class client:
                             if len(peer_info['ip']) == 0:
                                 # case : no peer has enough chunk
                                 print("Fail - No peer have enough chunk")
+                                self.log.append("Fail - No peer have enough chunk")
                                 # removing chunk files
                                 files = os.listdir(self.chunk_path)
                                 self.status = -1
@@ -427,6 +434,7 @@ class client:
                                 break
 
                     print("Finished")
+                    self.log.append("Finished")
                 break
 
                 self.log.append(receive_message)
@@ -436,6 +444,7 @@ class client:
                 break
 
             elif "Waiting" in cmd:
+                self.log.append(receive_message)
                 break
 
             else:
@@ -473,7 +482,7 @@ class client:
                 print("Something's wrong")
                 self.set_message(" ")
 
-        self.log.append("[Anncounment] Disconnect from the server !")
+        self.log.append("[Announcement] Disconnect from the server !")
         self.client_socket.close()
 
     def stop_connect_to_server(self):
@@ -497,8 +506,8 @@ class ClientApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("File Sharing Client")
-        self.geometry("600x400")
-        self.client = client()  # Make sure new_client is properly initialized and configured
+        self.geometry("480x480")
+        self.client = client()
 
         self.setup_ui()
 
@@ -535,7 +544,7 @@ class ClientApp(tk.Tk):
         # Connect Button
         ttk.Button(self, text="Connect", command=self.connect_to_server).grid(row=5, columnspan=3, pady=10)
 
-        # File List (To Be Implemented)
+        # File List
         self.file_list = tk.Listbox(self, height=10)
         self.file_list.grid(row=6, column=0, columnspan=3, sticky='ew', padx=10, pady=5)
 
@@ -548,7 +557,7 @@ class ClientApp(tk.Tk):
         ttk.Button(self, text="Upload File", command=self.upload_file).grid(row=7, column=0, padx=10, pady=5)
         ttk.Button(self, text="Download Selected", command=self.download_file).grid(row=7, column=2, padx=10, pady=5)
 
-        ttk.Button(self, text="Refresh List", command=self.refresh_file_list).grid(row=8, column=0, padx=10, pady=5)
+        ttk.Button(self, text="Refresh List", command=self.fetch_logs).grid(row=8, column=0, padx=10, pady=5)
         
     def browse_json_file(self):
         filename = filedialog.askopenfilename(initialdir="/", title="Select a JSON file",
@@ -558,12 +567,17 @@ class ClientApp(tk.Tk):
             self.json_file_entry.insert(0, filename)
             self.client.json_path = filename
 
-    def refresh_file_list(self):
-        self.file_list.delete(0, tk.END)  # Clear the existing list
-        # Assuming the client class has an attribute 'file_list' that stores the current files
-        for file_id, file_data in self.client.file_list.dict.items():
-            display_text = f"{file_data.name} - Chunks: {file_data.total}"
-            self.file_list.insert(tk.END, display_text)
+    def fetch_logs(self):
+        # Function to fetch logs
+        # Get logs from server
+        logs = self.client.log
+
+        # Clear existing log text
+        self.file_list.delete(0, tk.END)
+
+        # Insert new log entries
+        for entry in logs:
+            self.file_list.insert(tk.END, f"{entry}\n")
 
     def browse_upload_folder(self):
         filename = filedialog.askopenfilename()
@@ -571,7 +585,6 @@ class ClientApp(tk.Tk):
             self.up_directory_entry.delete(0, tk.END)
             self.up_directory_entry.insert(0, filename)
             self.client.set_client_upload_path(filename)
-            
 
     def browse_download_folder(self):
         directory = filedialog.askdirectory()
@@ -590,21 +603,45 @@ class ClientApp(tk.Tk):
             print(f"chunk path 1: {self.client.chunk_path}")
 
     def connect_to_server(self):
+        # Retrieve the values from the entries
         server_ip = self.server_ip_entry.get()
+        upload_directory = self.up_directory_entry.get()
+        json_file = self.json_file_entry.get()
+        download_directory = self.down_directory_entry.get()
+        chunk_directory = self.chunk_directory_entry.get()
+
+        # Check if any field is empty
+        if not (server_ip and upload_directory and json_file and download_directory and chunk_directory):
+            missing_fields = []
+            if not server_ip:
+                missing_fields.append("Server IP")
+            if not upload_directory:
+                missing_fields.append("Upload Directory")
+            if not json_file:
+                missing_fields.append("JSON File")
+            if not download_directory:
+                missing_fields.append("Download Directory")
+            if not chunk_directory:
+                missing_fields.append("Chunk Directory")
+
+            # Alert the user about the missing fields
+            messagebox.showerror("Missing Fields", f"Please fill in the following fields: {', '.join(missing_fields)}")
+            return  # Prevent further execution until fields are filled
+
+        # If all fields are filled, set server IP and start the connection process
         self.client.set_server_host(server_ip)
-        print(f"serverip: {server_ip}")
         self.client.start_client()
-        # self.client.server_host = server_ip  # Set the server host in the client
-        # self.client.server_port = 18520  # Optionally set this if it might change
-        # Start handling server communication in a new thread
-        # server_thread = threading.Thread(target=self.client.handle_server)
-        # server_thread.start()
+        self.client.is_connected = True  # Set connection flag to True after successful connection
         print("Connection to server initiated.")
 
     def upload_file(self):
         filename = self.up_directory_entry.get()
         # filename = filedialog.askopenfilename(initialdir=upload_path, title="Select file",
         #                                       filetypes=(("all files", "*.*"), ("pdf files", "*.pdf")))
+        if not self.client.is_connected:
+            messagebox.showwarning("Connection Required", "Please connect to the server first.")
+            return
+
         if filename:
             try:
                 # self.client.upload_path = filename
@@ -620,13 +657,10 @@ class ClientApp(tk.Tk):
                 messagebox.showerror("Upload Failed", f"Could not prepare the file for upload: {e}")
 
     def download_file(self):
+        if not self.client.is_connected:
+            messagebox.showwarning("Connection Required", "Please connect to the server first.")
+            return
         try:
-            # self.client.upload_path = filename
-            # Properly create a thread to handle server communication
-            # upload_thread = threading.Thread(target=self.client.handle_server)
-            # upload_thread.start()
-            # print(self.upload_dir_entry.get())
-            self.client.json_path = r"D:\Computer Network\BTL\testing_data\ouptut\Multidisciplinary_Project-2.pdf.json"
             with open(self.client.json_path, 'r') as json_file:
                 file_info = json.load(json_file)
                 id = int(file_info.get("id"))
